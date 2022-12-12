@@ -1,0 +1,24 @@
+[tool.poetry]
+name = "blackbox-ci"
+version = "0.1.0"
+description = "Command-line client for the BlackBox API"
+authors = ["BlackBox Team <feedback.bbs@ptsecurity.com>"]
+license = "Apache-2.0"
+
+[tool.poetry.dependencies]
+python = "^3.6.2"
+requests = "^2.27.1"
+click = "^8.0.4"
+
+[tool.poetry.dev-dependencies]
+flake8 = "^4.0.1"
+mypy = "^0.940"
+types-requests = "^2.27.11"
+isort = "^5.10.1"
+flake8-bandit = "^2.1.2"
+flake8-bugbear = "^22.1.11"
+black = "^22.1.0"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
