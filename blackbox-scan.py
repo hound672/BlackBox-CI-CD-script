@@ -21,6 +21,8 @@ SUCCESS_EXIT_CODE = 0
 ERROR_EXIT_CODE = 1
 SCORE_FAIL_EXIT_CODE = 3
 
+MAX_ATTEMPTS = 5
+
 # Types
 VulnCommon = typing.Dict[str, typing.Any]
 
@@ -214,7 +216,12 @@ class BlackBoxAPI:
 
     def is_scan_busy(self, site_id: int, scan_id: int) -> bool:
         scan_url = urllib.parse.urljoin(self._url, f"sites/{site_id}/scans/{scan_id}")
-        resp = self._sess.get(scan_url)
+        request_hooks = {"response": [self._ensure_json]}
+        for _ in range(MAX_ATTEMPTS):
+            resp = self._sess.get(scan_url, hooks=request_hooks)
+            if resp.status_code != 403:
+                break
+        self._raise_for_status(resp)
         scan = resp.json()["data"]
         return scan["status"] not in ("STOPPED", "FINISHED")
 
