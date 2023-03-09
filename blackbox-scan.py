@@ -5,7 +5,6 @@ import time
 import typing
 import urllib.parse
 import warnings
-from enum import Enum, EnumMeta
 
 if sys.version_info >= (3, 8):
     from typing import TypedDict
@@ -95,7 +94,7 @@ class ScanReport(TypedDict):
     url: str
     vulns: typing.Optional[TargetVulns]
     sharedLink: typing.Optional[str]
-    score: typing.Optional["Score"]
+    score: typing.Optional[int]
 
 
 # Errors
@@ -114,50 +113,6 @@ class ScoreFailError(ScanResultError):
 
 
 # Classes
-class Score(Enum):
-    A_plus = "A+"
-    A = "A"
-    B = "B"
-    C = "C"
-    D = "D"
-    E = "E"
-    F = "F"
-
-    def __lt__(self, other: "Score") -> bool:
-        members = list(Score)
-        self_index = members.index(self)
-        other_index = members.index(other)
-        return self_index > other_index
-
-
-class ScoreChoice(click.Choice):
-    def __init__(
-        self, enum: EnumMeta, case_sensitive: bool = False, use_value: bool = False
-    ):
-        self.enum = enum
-        self.use_value = use_value
-        choices: typing.List[str] = [
-            str(e.value) if use_value else e.name
-            for e in typing.cast(typing.List[Enum], self.enum)
-        ]
-        super().__init__(choices=choices, case_sensitive=case_sensitive)
-
-    def convert(
-        self,
-        value: typing.Any,
-        param: typing.Optional["click.Parameter"],
-        ctx: typing.Optional["click.Context"],
-    ) -> Enum:
-        value = super().convert(value, param, ctx)
-        if self.use_value:
-            return next(
-                e
-                for e in typing.cast(typing.List[Enum], self.enum)
-                if str(e.value) == value
-            )
-        return self.enum[value]
-
-
 class BlackBoxAPI:
     def __init__(self, url: str, api_token: str, ignore_ssl: bool) -> None:
         self._url = url
@@ -169,43 +124,43 @@ class BlackBoxAPI:
         ]
         self._sess.headers["Authorization"] = f"Basic {api_token}"
 
-    def get_site_id(self, url: str) -> typing.Optional[int]:
+    def get_site_uuid(self, url: str) -> typing.Optional[str]:
         sites_url = urllib.parse.urljoin(self._url, "sites")
         resp = self._sess.get(sites_url)
         for site in resp.json()["data"]:
             if site["url"] == url:
-                return int(site["id"])
+                return str(site["uuid"])
         return None
 
-    def add_site(self, target_url: str) -> int:
+    def add_site(self, target_url: str) -> str:
         sites_url = urllib.parse.urljoin(self._url, "sites/add")
         sites_req = {"url": target_url}
         resp = self._sess.post(sites_url, json=sites_req)
-        site_id = resp.json()["data"]["id"]
-        return int(site_id)
+        site_uuid = resp.json()["data"]["uuid"]
+        return str(site_uuid)
 
-    def set_site_profile_uuid(self, site_id: int, profile_uuid: str) -> None:
-        sites_url = urllib.parse.urljoin(self._url, f"sites/{site_id}/settings")
+    def set_site_profile_uuid(self, site_uuid: str, profile_uuid: str) -> None:
+        sites_url = urllib.parse.urljoin(self._url, f"sites/{site_uuid}/settings")
         sites_req = {"profileUUID": profile_uuid}
         self._sess.post(sites_url, json=sites_req)
 
-    def get_site_profile_uuid(self, site_id: int) -> str:
-        sites_url = urllib.parse.urljoin(self._url, f"sites/{site_id}/settings")
+    def get_site_profile_uuid(self, site_uuid: str) -> str:
+        sites_url = urllib.parse.urljoin(self._url, f"sites/{site_uuid}/settings")
         resp = self._sess.get(sites_url)
         return str(resp.json()["data"]["profile"]["uuid"])
 
-    def start_scan(self, site_id: int) -> int:
-        sites_url = urllib.parse.urljoin(self._url, f"sites/{site_id}/start")
+    def start_scan(self, site_uuid: str) -> int:
+        sites_url = urllib.parse.urljoin(self._url, f"sites/{site_uuid}/start")
         resp = self._sess.post(sites_url)
         scan_id = resp.json()["data"]["id"]
         return int(scan_id)
 
-    def stop_scan(self, site_id: int) -> None:
-        sites_url = urllib.parse.urljoin(self._url, f"sites/{site_id}/stop")
+    def stop_scan(self, site_uuid: str) -> None:
+        sites_url = urllib.parse.urljoin(self._url, f"sites/{site_uuid}/stop")
         self._sess.post(sites_url)
 
-    def is_site_busy(self, site_id: int) -> bool:
-        sites_url = urllib.parse.urljoin(self._url, f"sites/{site_id}")
+    def is_site_busy(self, site_uuid: str) -> bool:
+        sites_url = urllib.parse.urljoin(self._url, f"sites/{site_uuid}")
         resp = self._sess.get(sites_url)
         site = resp.json()["data"]
         last_scan = site["lastScan"]
@@ -214,8 +169,8 @@ class BlackBoxAPI:
         last_scan_status = last_scan["status"]
         return last_scan_status not in ("STOPPED", "FINISHED")
 
-    def is_scan_busy(self, site_id: int, scan_id: int) -> bool:
-        scan_url = urllib.parse.urljoin(self._url, f"sites/{site_id}/scans/{scan_id}")
+    def is_scan_busy(self, site_uuid: str, scan_id: int) -> bool:
+        scan_url = urllib.parse.urljoin(self._url, f"sites/{site_uuid}/scans/{scan_id}")
         request_hooks = {"response": [self._ensure_json]}
         for _ in range(MAX_ATTEMPTS):
             resp = self._sess.get(scan_url, hooks=request_hooks)
@@ -225,15 +180,15 @@ class BlackBoxAPI:
         scan = resp.json()["data"]
         return scan["status"] not in ("STOPPED", "FINISHED")
 
-    def is_scan_ok(self, site_id: int, scan_id: int) -> bool:
-        scan_url = urllib.parse.urljoin(self._url, f"sites/{site_id}/scans/{scan_id}")
+    def is_scan_ok(self, site_uuid: str, scan_id: int) -> bool:
+        scan_url = urllib.parse.urljoin(self._url, f"sites/{site_uuid}/scans/{scan_id}")
         resp = self._sess.get(scan_url)
         scan = resp.json()["data"]
         return scan["status"] == "FINISHED" and scan["errorReason"] is None
 
     def get_group_page(
         self,
-        site_id: int,
+        site_uuid: str,
         scan_id: int,
         issue_type: str,
         request_key: str,
@@ -243,29 +198,32 @@ class BlackBoxAPI:
     ) -> VulnPage:
         vuln_group_url = urllib.parse.urljoin(
             self._url,
-            f"sites/{site_id}/scans/{scan_id}/vulnerabilities"
+            f"sites/{site_uuid}/scans/{scan_id}/vulnerabilities"
             f"/{issue_type}/{request_key}/{severity}"
             f"?limit={limit}&page={page}",
         )
         resp = self._sess.get(vuln_group_url)
         return typing.cast(VulnPage, resp.json()["data"])
 
-    def get_groups(self, site_id: int, scan_id: int) -> typing.List[VulnGroup]:
+    def get_groups(self, site_uuid: str, scan_id: int) -> typing.List[VulnGroup]:
         vulns_url = urllib.parse.urljoin(
-            self._url, f"sites/{site_id}/scans/{scan_id}/vulnerabilities"
+            self._url, f"sites/{site_uuid}/scans/{scan_id}/vulnerabilities"
         )
         resp = self._sess.get(vulns_url)
         return typing.cast(typing.List[VulnGroup], resp.json()["data"])
 
-    def get_score(self, site_id: int, scan_id: int) -> typing.Optional[Score]:
-        score_url = urllib.parse.urljoin(self._url, f"sites/{site_id}/scans/{scan_id}")
+    def get_score(self, site_uuid: str, scan_id: int) -> typing.Optional[int]:
+        score_url = urllib.parse.urljoin(
+            self._url, f"sites/{site_uuid}/scans/{scan_id}"
+        )
         resp = self._sess.get(score_url)
         score = resp.json()["data"]["score"]
-        score = Score[score] if score is not None else None
-        return typing.cast(typing.Optional[Score], score)
+        return typing.cast(typing.Optional[int], score)
 
-    def create_shared_link(self, site_id: int, scan_id: int) -> str:
-        url = urllib.parse.urljoin(self._url, f"sites/{site_id}/scans/{scan_id}/shared")
+    def create_shared_link(self, site_uuid: str, scan_id: int) -> str:
+        url = urllib.parse.urljoin(
+            self._url, f"sites/{site_uuid}/scans/{scan_id}/shared"
+        )
         resp = self._sess.post(url)
         uuid = resp.json()["data"]["uuid"]
         return typing.cast(str, uuid)
@@ -294,52 +252,52 @@ class BlackBoxOperator:
         self._ui_base_url = url
         api_url = urllib.parse.urljoin(url, "app/api/v1/")
         self._api = BlackBoxAPI(api_url, api_token, ignore_ssl)
-        self._site_id: typing.Optional[int] = None
+        self._site_uuid: typing.Optional[str] = None
         self._scan_id: typing.Optional[int] = None
         self._scan_finished: bool = False
 
     def set_target(self, url: str, auto_create: bool) -> None:
         # FIXME: Search may not work because of URL normalization at the backend.
-        site_id = self._api.get_site_id(url)
-        if site_id is None:
+        site_uuid = self._api.get_site_uuid(url)
+        if site_uuid is None:
             if not auto_create:
                 raise BlackBoxError(
                     "the site with the URL specified was not found, "
                     "use UI to create one manually, "
                     "or use --auto-create flag to do so automatically"
                 )
-            site_id = self._api.add_site(url)
-        self._site_id = site_id
+            site_uuid = self._api.add_site(url)
+        self._site_uuid = site_uuid
 
     def set_site_profile(self, profile_uuid: str) -> None:
-        assert self._site_id, "target not set"
+        assert self._site_uuid, "target not set"
 
-        current_uuid = self._api.get_site_profile_uuid(self._site_id)
+        current_uuid = self._api.get_site_profile_uuid(self._site_uuid)
         if current_uuid != profile_uuid:
-            self._api.set_site_profile_uuid(self._site_id, profile_uuid)
+            self._api.set_site_profile_uuid(self._site_uuid, profile_uuid)
 
     def ensure_target_is_idle(self, previous: str) -> None:
-        assert self._site_id, "target not set"
+        assert self._site_uuid, "target not set"
 
-        if not self._api.is_site_busy(self._site_id):
+        if not self._api.is_site_busy(self._site_uuid):
             return
 
         if previous == "fail":
             raise BlackBoxError("the target is busy")
 
         if previous == "stop":
-            self._api.stop_scan(self._site_id)
+            self._api.stop_scan(self._site_uuid)
         # previous is either "stop" or "wait"
         self._wait_for_target()
 
     def start_scan(self) -> None:
-        assert self._site_id, "target not set"
+        assert self._site_uuid, "target not set"
 
-        self._scan_id = self._api.start_scan(self._site_id)
+        self._scan_id = self._api.start_scan(self._site_uuid)
         self._scan_finished = False
 
     def get_scan_report(self, share_link: bool) -> ScanReport:
-        assert self._site_id and self._scan_id, "target or scan not set"
+        assert self._site_uuid and self._scan_id, "target or scan not set"
 
         report: ScanReport = {
             "url": self._scan_url,
@@ -348,34 +306,34 @@ class BlackBoxOperator:
             "sharedLink": None,
         }
         if self._scan_finished:
-            report["score"] = self._api.get_score(self._site_id, self._scan_id)
+            report["score"] = self._api.get_score(self._site_uuid, self._scan_id)
             report["vulns"] = self._collect_vulns()
         if share_link:
             report["sharedLink"] = self._create_shared_link()
         return report
 
     def wait_for_scan(self) -> None:
-        assert self._site_id and self._scan_id, "target or scan not set"
+        assert self._site_uuid and self._scan_id, "target or scan not set"
 
-        while self._api.is_scan_busy(self._site_id, self._scan_id):
+        while self._api.is_scan_busy(self._site_uuid, self._scan_id):
             time.sleep(2.0)
         self._scan_finished = True
-        if not self._api.is_scan_ok(self._site_id, self._scan_id):
+        if not self._api.is_scan_ok(self._site_uuid, self._scan_id):
             raise BlackBoxError(
                 f"the scan did not succeed, "
                 f"see UI for the error reason: {self._scan_url}"
             )
 
     def _wait_for_target(self) -> None:
-        assert self._site_id, "target not set"
+        assert self._site_uuid, "target not set"
 
-        while self._api.is_site_busy(self._site_id):
+        while self._api.is_site_busy(self._site_uuid):
             time.sleep(2.0)
 
     def _create_shared_link(self) -> str:
-        assert self._site_id and self._scan_id, "target or scan not set"
+        assert self._site_uuid and self._scan_id, "target or scan not set"
 
-        shared_link_uuid = self._api.create_shared_link(self._site_id, self._scan_id)
+        shared_link_uuid = self._api.create_shared_link(self._site_uuid, self._scan_id)
         shared_link = urllib.parse.urljoin(
             self._ui_base_url, f"/shared/{shared_link_uuid}"
         )
@@ -384,9 +342,9 @@ class BlackBoxOperator:
     def _collect_vulns(
         self,
     ) -> TargetVulns:
-        assert self._site_id and self._scan_id, "target or scan not set"
+        assert self._site_uuid and self._scan_id, "target or scan not set"
 
-        group_list = self._api.get_groups(self._site_id, self._scan_id)
+        group_list = self._api.get_groups(self._site_uuid, self._scan_id)
         vuln_report: TargetVulns = {
             "issue_groups": [],
             "error_page_groups": [],
@@ -522,14 +480,14 @@ class BlackBoxOperator:
         """
         Just wrapper for reading all vulns
         """
-        assert self._site_id and self._scan_id, "target or scan not set"
+        assert self._site_uuid and self._scan_id, "target or scan not set"
 
         vulns: typing.List[VulnCommon] = []
         has_next_page = True
         page = 1  # page starts with 1
         while has_next_page is True:
             vuln_page = self._api.get_group_page(
-                self._site_id,
+                self._site_uuid,
                 self._scan_id,
                 issue_type=issue_type,
                 request_key=request_key,
@@ -547,17 +505,11 @@ class BlackBoxOperator:
     def _scan_url(self) -> str:
         return urllib.parse.urljoin(
             self._ui_base_url,
-            f"/sites/{self._site_id}/scans/{self._scan_id}",
+            f"/sites/{self._site_uuid}/scans/{self._scan_id}",
         )
 
 
 # Functions
-def report_serializer(x: typing.Any) -> typing.Any:
-    if isinstance(x, Score):
-        return x.value
-    return x
-
-
 @click.command()
 @click.option(
     "--blackbox-url", envvar="BLACKBOX_URL", default="https://bbs.ptsecurity.com/"
@@ -600,10 +552,10 @@ def report_serializer(x: typing.Any) -> typing.Any:
 )
 @click.option(
     "--fail-under-score",
-    type=ScoreChoice(Score, use_value=True),
+    type=click.IntRange(1, 10),
     default=None,
     help="Fail with exit code 3 if report scoring is less "
-    "then given score (set 'F' or do not set to never fail).",
+    "then given score (set '1' or do not set to never fail).",
 )
 def main(
     blackbox_url: str,
@@ -615,7 +567,7 @@ def main(
     no_wait: bool,
     shared_link: bool,
     scan_profile: typing.Optional[str],
-    fail_under_score: typing.Optional[Score],
+    fail_under_score: typing.Optional[int],
 ) -> None:
     if ignore_ssl:
         warnings.simplefilter("ignore", urllib3.exceptions.InsecureRequestWarning)
@@ -632,7 +584,7 @@ def main(
         operator.wait_for_scan()
 
     report = operator.get_scan_report(shared_link)
-    print(json.dumps(report, default=report_serializer))
+    print(json.dumps(report))
 
     if (
         report["score"] is not None

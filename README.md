@@ -23,8 +23,8 @@ pip install -r requirements.txt
 ### Options
 
 ```
-Usage: blackbox-scan.py [OPTIONS]                                            
-                                                                             
+Usage: blackbox-scan.py [OPTIONS]
+
 Options:
   --blackbox-url TEXT
   --blackbox-api-token TEXT       [required]
@@ -39,10 +39,10 @@ Options:
                                   finished.
   --shared-link                   Create shared link for scan.
   --scan-profile TEXT             Set scan profile UUID for new scan
-  --fail-under-score [A+|A|B|C|D|E|F]
+  --fail-under-score INTEGER RANGE
                                   Fail with exit code 3 if report scoring is
-                                  less then given score (set 'F' or do not set
-                                  to never fail).
+                                  less then given score (set '1' or do not set
+                                  to never fail).  [1<=x<=10]
   --help                          Show this message and exit.
 ```
 
@@ -74,7 +74,7 @@ Example output (reformatted for readability):
 
 ```json
 {
-    "url": "https://bbs.ptsecurity.com/sites/3/scans/1",
+    "url": "https://bbs.ptsecurity.com/sites/ccb7de77-ff51-464d-bf25-7ebcfe0403d6/scans/1",
     "vulns": {
         "issue_groups": [
             {
@@ -148,7 +148,7 @@ Example output (reformatted for readability):
             }
         ]
     },
-    "score": "F",
+    "score": 1,
     "sharedLink": "https://bbs.ptsecurity.com/shared/dee4Lyx"
 }
 ```
@@ -156,7 +156,7 @@ Example output (reformatted for readability):
 In case an error occurs, the tool returns non-zero exit code and prints error log messages to `stderr`:
 
 ```
-2021-12-03 13:24:52,517 ERROR [root] BlackBox error: the scan did not succeed, see UI for the error reason: http://bbs.ptsecurity.com/sites/2/scans/1
+2021-12-03 13:24:52,517 ERROR [root] BlackBox error: the scan did not succeed, see UI for the error reason: http://bbs.ptsecurity.com/sites/ccb7de77-ff51-464d-bf25-7ebcfe0403d6/scans/1
 ```
 
 ## Bugs and Issues
