@@ -15,13 +15,18 @@ else:
 import click
 import requests
 import urllib3.exceptions
+from requests.adapters import HTTPAdapter, Retry
 
 # Consts
+SERVER_RETRY_MAX_ATTEMPTS = 5
+SERVER_RETRY_BACKOFF_FACTOR = 0.5
+SERVER_RETRY_STATUSES = [502, 503, 504]
+
 SUCCESS_EXIT_CODE = 0
 ERROR_EXIT_CODE = 1
 SCORE_FAIL_EXIT_CODE = 3
 
-MAX_ATTEMPTS = 5
+CLIENT_MAX_ATTEMPTS = 5
 
 # Types
 VulnCommon = typing.Dict[str, typing.Any]
@@ -103,6 +108,35 @@ class BlackBoxError(Exception):
     pass
 
 
+class BlackBoxRequestError(BlackBoxError):
+    pass
+
+
+class BlackBoxUrlError(BlackBoxRequestError):
+    pass
+
+
+class BlackBoxConnectionError(BlackBoxUrlError):
+    pass
+
+
+class BlackBoxSSLError(BlackBoxConnectionError):
+    pass
+
+
+class BlackBoxInvalidUrlError(BlackBoxUrlError):
+    pass
+
+
+class BlackBoxHTTPError(BlackBoxRequestError):
+    def __init__(
+        self, *args: object, request: requests.Request, response: requests.Response
+    ):
+        self.request = request
+        self.response = response
+        super(BlackBoxHTTPError, self).__init__(*args)
+
+
 class ScanResultError(Exception):
     """Report checks errors"""
 
@@ -159,10 +193,20 @@ class ScoreChoice(click.Choice):
 
 
 class BlackBoxAPI:
-    def __init__(self, url: str, api_token: str, ignore_ssl: bool) -> None:
-        self._url = url
+    def __init__(self, base_url: str, api_token: str, ignore_ssl: bool) -> None:
         self._sess = requests.session()
+        _retry = Retry(
+            total=SERVER_RETRY_MAX_ATTEMPTS,
+            status_forcelist=SERVER_RETRY_STATUSES,
+            backoff_factor=SERVER_RETRY_BACKOFF_FACTOR,
+            raise_on_status=False,
+        )
+        _adapter = HTTPAdapter(max_retries=_retry)
+        self._sess.mount("http://", _adapter)
+        self._sess.mount("https://", _adapter)
         self._sess.verify = not ignore_ssl
+        self._test_base_url(base_url)
+        self._url = urllib.parse.urljoin(base_url, "app/api/v1/")
         self._sess.hooks["response"] = [
             self._raise_for_status,
             self._ensure_json,
@@ -171,7 +215,7 @@ class BlackBoxAPI:
 
     def get_site_id(self, url: str) -> typing.Optional[int]:
         sites_url = urllib.parse.urljoin(self._url, "sites")
-        resp = self._sess.get(sites_url)
+        resp = self._get(sites_url)
         for site in resp.json()["data"]:
             if site["url"] == url:
                 return int(site["id"])
@@ -180,33 +224,33 @@ class BlackBoxAPI:
     def add_site(self, target_url: str) -> int:
         sites_url = urllib.parse.urljoin(self._url, "sites/add")
         sites_req = {"url": target_url}
-        resp = self._sess.post(sites_url, json=sites_req)
+        resp = self._post(sites_url, json=sites_req)
         site_id = resp.json()["data"]["id"]
         return int(site_id)
 
     def set_site_profile_uuid(self, site_id: int, profile_uuid: str) -> None:
         sites_url = urllib.parse.urljoin(self._url, f"sites/{site_id}/settings")
         sites_req = {"profileUUID": profile_uuid}
-        self._sess.post(sites_url, json=sites_req)
+        self._post(sites_url, json=sites_req)
 
     def get_site_profile_uuid(self, site_id: int) -> str:
         sites_url = urllib.parse.urljoin(self._url, f"sites/{site_id}/settings")
-        resp = self._sess.get(sites_url)
+        resp = self._get(sites_url)
         return str(resp.json()["data"]["profile"]["uuid"])
 
     def start_scan(self, site_id: int) -> int:
         sites_url = urllib.parse.urljoin(self._url, f"sites/{site_id}/start")
-        resp = self._sess.post(sites_url)
+        resp = self._post(sites_url)
         scan_id = resp.json()["data"]["id"]
         return int(scan_id)
 
     def stop_scan(self, site_id: int) -> None:
         sites_url = urllib.parse.urljoin(self._url, f"sites/{site_id}/stop")
-        self._sess.post(sites_url)
+        self._post(sites_url)
 
     def is_site_busy(self, site_id: int) -> bool:
         sites_url = urllib.parse.urljoin(self._url, f"sites/{site_id}")
-        resp = self._sess.get(sites_url)
+        resp = self._get(sites_url)
         site = resp.json()["data"]
         last_scan = site["lastScan"]
         if not last_scan:
@@ -216,18 +260,19 @@ class BlackBoxAPI:
 
     def is_scan_busy(self, site_id: int, scan_id: int) -> bool:
         scan_url = urllib.parse.urljoin(self._url, f"sites/{site_id}/scans/{scan_id}")
-        request_hooks = {"response": [self._ensure_json]}
-        for _ in range(MAX_ATTEMPTS):
-            resp = self._sess.get(scan_url, hooks=request_hooks)
+        for _ in range(CLIENT_MAX_ATTEMPTS):
+            # temporary turn hooks off to prevent exceptions for additional attempts
+            resp = self._get(scan_url, hooks={"response": []})
             if resp.status_code != 403:
                 break
         self._raise_for_status(resp)
+        self._ensure_json(resp)
         scan = resp.json()["data"]
         return scan["status"] not in ("STOPPED", "FINISHED")
 
     def is_scan_ok(self, site_id: int, scan_id: int) -> bool:
         scan_url = urllib.parse.urljoin(self._url, f"sites/{site_id}/scans/{scan_id}")
-        resp = self._sess.get(scan_url)
+        resp = self._get(scan_url)
         scan = resp.json()["data"]
         return scan["status"] == "FINISHED" and scan["errorReason"] is None
 
@@ -247,34 +292,65 @@ class BlackBoxAPI:
             f"/{issue_type}/{request_key}/{severity}"
             f"?limit={limit}&page={page}",
         )
-        resp = self._sess.get(vuln_group_url)
+        resp = self._get(vuln_group_url)
         return typing.cast(VulnPage, resp.json()["data"])
 
     def get_groups(self, site_id: int, scan_id: int) -> typing.List[VulnGroup]:
         vulns_url = urllib.parse.urljoin(
             self._url, f"sites/{site_id}/scans/{scan_id}/vulnerabilities"
         )
-        resp = self._sess.get(vulns_url)
+        resp = self._get(vulns_url)
         return typing.cast(typing.List[VulnGroup], resp.json()["data"])
 
     def get_score(self, site_id: int, scan_id: int) -> typing.Optional[Score]:
         score_url = urllib.parse.urljoin(self._url, f"sites/{site_id}/scans/{scan_id}")
-        resp = self._sess.get(score_url)
+        resp = self._get(score_url)
         score = resp.json()["data"]["score"]
         score = Score[score] if score is not None else None
         return typing.cast(typing.Optional[Score], score)
 
     def create_shared_link(self, site_id: int, scan_id: int) -> str:
         url = urllib.parse.urljoin(self._url, f"sites/{site_id}/scans/{scan_id}/shared")
-        resp = self._sess.post(url)
+        resp = self._post(url)
         uuid = resp.json()["data"]["uuid"]
         return typing.cast(str, uuid)
+
+    def _request(
+        self,
+        method: str,
+        url: str,
+        **kwargs: typing.Any,
+    ) -> requests.Response:
+        assert method in ("GET", "POST"), f"Method {method} not allowed"
+
+        try:
+            resp = self._sess.request(method, url=url, **kwargs)
+        except requests.exceptions.ConnectionError:
+            raise BlackBoxConnectionError(f"Failed connection to '{url}'")
+        except requests.RequestException as er:
+            raise BlackBoxRequestError(f"Error while handling request {er}")
+        else:
+            return resp
+
+    def _get(self, url: str, **kwargs: typing.Any) -> requests.Response:
+        kwargs.setdefault("allow_redirects", True)
+        return self._request("GET", url=url, **kwargs)
+
+    def _post(
+        self,
+        url: str,
+        **kwargs: typing.Any,
+    ) -> requests.Response:
+        return self._request("POST", url=url, **kwargs)
 
     @staticmethod
     def _raise_for_status(
         resp: requests.Response, *args: typing.Any, **kwargs: typing.Any
     ) -> None:
-        resp.raise_for_status()
+        try:
+            resp.raise_for_status()
+        except requests.HTTPError as er:
+            raise BlackBoxHTTPError(er, request=er.request, response=er.response)
 
     @staticmethod
     def _ensure_json(
@@ -286,14 +362,29 @@ class BlackBoxAPI:
                 "check if BlackBox URL is specified correctly"
             )
 
+    def _test_base_url(self, url: str) -> None:
+        try:
+            resp = self._sess.get(url)
+        except requests.exceptions.SSLError:
+            raise BlackBoxSSLError(
+                f"SSL verification failed for '{url}', "
+                f"it is possible to ignore SSL verification "
+                f"if you trust this server"
+            )
+        except requests.exceptions.ConnectionError:
+            raise BlackBoxConnectionError(f"Failed connection to '{url}'")
+        except ValueError:
+            raise BlackBoxInvalidUrlError(f"Check url provided '{url}'")
+        else:
+            self._raise_for_status(resp)
+
 
 class BlackBoxOperator:
     _PAGE_VULNS_LIMIT = 100
 
     def __init__(self, url: str, api_token: str, ignore_ssl: bool) -> None:
         self._ui_base_url = url
-        api_url = urllib.parse.urljoin(url, "app/api/v1/")
-        self._api = BlackBoxAPI(api_url, api_token, ignore_ssl)
+        self._api = BlackBoxAPI(url, api_token, ignore_ssl)
         self._site_id: typing.Optional[int] = None
         self._scan_id: typing.Optional[int] = None
         self._scan_finished: bool = False
@@ -642,7 +733,7 @@ def main(
         raise ScoreFailError()
 
 
-def log_http_error(err: requests.HTTPError) -> None:
+def log_http_error(err: BlackBoxHTTPError) -> None:
     verbose = ""
     if isinstance(err.response, requests.Response):
         if err.response.headers["Content-Type"] == "application/json":
@@ -658,8 +749,10 @@ if __name__ == "__main__":  # noqa: C901
     )
     try:
         main()
-    except requests.HTTPError as err:
+    except BlackBoxHTTPError as err:
         log_http_error(err)
+    except BlackBoxUrlError as err:
+        logging.error(f"Invalid BlackBox url or server connection failed: {err}")
     except BlackBoxError as err:
         logging.error(f"BlackBox error: {err}")
     except ScoreFailError:
