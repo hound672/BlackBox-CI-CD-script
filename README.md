@@ -23,24 +23,31 @@ pip install -r requirements.txt
 ### Options
 
 ```
-Usage: blackbox-scan.py [OPTIONS]                                            
-                                                                             
-Options:                                                                     
-  --blackbox-url TEXT                                                        
-  --blackbox-api-token TEXT       [required]                                 
-  --target-url TEXT               [required]                                 
+Usage: blackbox-scan.py [OPTIONS]
+
+Options:
+  --blackbox-url TEXT
+  --blackbox-api-token TEXT       [required]
+  --target-url TEXT               [required]
+  --group-uuid TEXT               Set group UUID for site
   --ignore-ssl                    Skip verification of BlackBox API host     
-                                  certificate.                               
+                                  certificate.
   --auto-create                   Automatically create a site if a site with 
-                                  the target URL was not found.              
+                                  the target URL in the specified group was  
+                                  not found.
   --previous [wait|stop|fail]     What to do if the target is currently being
-                                  scanned.                                   
+                                  scanned.
   --no-wait                       Do not wait until the started scan is      
                                   finished.
   --shared-link                   Create shared link for scan.
   --scan-profile TEXT             Set scan profile UUID for new scan
-  --fail-under-score INTEGER RANGE
-                                  Fail with exit code 3 if report scoring is
+  --auth-profile TEXT             Set authentication profile UUID for site.
+                                  For scanning without authentication specify
+                                  `RESET` in the option
+  --api-schema TEXT               Set API-schema UUID for site. For scanning
+                                  without API-schema specify `RESET` in the
+                                  option
+  --fail-under-score FLOAT RANGE  Fail with exit code 3 if report scoring is
                                   less then given score (set '1' or do not set
                                   to never fail).  [1<=x<=10]
   --help                          Show this message and exit.
@@ -55,6 +62,9 @@ The following environment variables may be used instead of corresponding options
 - `TARGET_URL`/`--target-url`
 - `IGNORE_SSL`/`--ignore-ssl`
 - `SCAN_PROFILE`/`--scan-profile`
+- `GROUP_UUID`/`--group-uuid`
+- `AUTH_PROFILE`/`--auth-profile`
+- `API_SCHEMA`/`--api-schema`
 
 ## Example
 
@@ -62,6 +72,7 @@ The following environment variables may be used instead of corresponding options
 export BLACKBOX_URL=https://bbs.ptsecurity.com/
 export BLACKBOX_API_TOKEN=D4OPXw7mXCWjHER0lE48PCr4UkcfD86AwOwnio9I1w3HsOSS3Hxo9xi82hoWOB5deVYMk3kedgh0f9yq
 export TARGET_URL=http://staging.example.com/
+export GROUP_UUID=ee2e5f90-c9ee-454e-a4db-123463d29851
 
 python blackbox-scan.py --auto-create --previous=stop
 ```

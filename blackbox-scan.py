@@ -25,7 +25,8 @@ SUCCESS_EXIT_CODE = 0
 ERROR_EXIT_CODE = 1
 SCORE_FAIL_EXIT_CODE = 3
 
-CLIENT_MAX_ATTEMPTS = 5
+RESET_AUTH_PROFILE = "RESET"
+RESET_API_PROFILE = "RESET"
 
 # Types
 VulnCommon = typing.Dict[str, typing.Any]
@@ -99,7 +100,33 @@ class ScanReport(TypedDict):
     url: str
     vulns: typing.Optional[TargetVulns]
     sharedLink: typing.Optional[str]
-    score: typing.Optional[int]
+    score: typing.Optional[float]
+
+
+class ScanProfile(TypedDict):
+    uuid: str
+    name: str
+    type: str
+
+
+class AuthenticationProfile(TypedDict):
+    uuid: str
+    name: str
+    type: str
+
+
+class APIProfile(TypedDict):
+    uuid: str
+    name: str
+    countOfSchemas: int
+
+
+class SiteSettings(TypedDict):
+    url: str
+    name: str
+    profile: ScanProfile
+    authentication: typing.Optional[AuthenticationProfile]
+    apiProfile: typing.Optional[APIProfile]
 
 
 # Errors
@@ -168,30 +195,47 @@ class BlackBoxAPI:
         ]
         self._sess.headers["Authorization"] = f"Basic {api_token}"
 
-    def get_site_uuid(self, url: str) -> typing.Optional[str]:
+    def get_user_group_uuids(self) -> typing.List[str]:
+        groups_url = urllib.parse.urljoin(self._url, "groups")
+        resp = self._get(groups_url)
+        groups = resp.json()["data"]
+        return [str(group["uuid"]) for group in groups]
+
+    def get_site_uuid(self, url: str, group_uuid: str) -> typing.Optional[str]:
         sites_url = urllib.parse.urljoin(self._url, "sites")
         resp = self._get(sites_url)
         for site in resp.json()["data"]:
-            if site["url"] == url:
+            if site["url"] == url and site["group"]["uuid"] == group_uuid:
                 return str(site["uuid"])
         return None
 
-    def add_site(self, target_url: str) -> str:
+    def add_site(self, target_url: str, group_uuid: str) -> str:
         sites_url = urllib.parse.urljoin(self._url, "sites/add")
-        sites_req = {"url": target_url}
+        sites_req = {"url": target_url, "groupUUID": group_uuid}
         resp = self._post(sites_url, json=sites_req)
         site_uuid = resp.json()["data"]["uuid"]
         return str(site_uuid)
 
-    def set_site_profile_uuid(self, site_uuid: str, profile_uuid: str) -> None:
+    def set_site_settings(
+        self,
+        site_uuid: str,
+        profile_uuid: str,
+        authentication_uuid: typing.Optional[str],
+        api_profile_uuid: typing.Optional[str],
+    ) -> None:
         sites_url = urllib.parse.urljoin(self._url, f"sites/{site_uuid}/settings")
-        sites_req = {"profileUUID": profile_uuid}
+        sites_req = {
+            "profileUUID": profile_uuid,
+            "authenticationUUID": authentication_uuid,
+            "apiProfileUUID": api_profile_uuid,
+        }
         self._post(sites_url, json=sites_req)
 
-    def get_site_profile_uuid(self, site_uuid: str) -> str:
+    def get_site_settings(self, site_uuid: str) -> SiteSettings:
         sites_url = urllib.parse.urljoin(self._url, f"sites/{site_uuid}/settings")
         resp = self._get(sites_url)
-        return str(resp.json()["data"]["profile"]["uuid"])
+        settings = resp.json()["data"]
+        return typing.cast(SiteSettings, settings)
 
     def start_scan(self, site_uuid: str) -> int:
         sites_url = urllib.parse.urljoin(self._url, f"sites/{site_uuid}/start")
@@ -215,13 +259,7 @@ class BlackBoxAPI:
 
     def is_scan_busy(self, site_uuid: str, scan_id: int) -> bool:
         scan_url = urllib.parse.urljoin(self._url, f"sites/{site_uuid}/scans/{scan_id}")
-        for _ in range(CLIENT_MAX_ATTEMPTS):
-            # temporary turn hooks off to prevent exceptions for additional attempts
-            resp = self._get(scan_url, hooks={"response": []})
-            if resp.status_code != 403:
-                break
-        self._raise_for_status(resp)
-        self._ensure_json(resp)
+        resp = self._get(scan_url)
         scan = resp.json()["data"]
         return scan["status"] not in ("STOPPED", "FINISHED")
 
@@ -231,7 +269,7 @@ class BlackBoxAPI:
         scan = resp.json()["data"]
         return scan["status"] == "FINISHED" and scan["errorReason"] is None
 
-    def get_group_page(
+    def get_vuln_group_page(
         self,
         site_uuid: str,
         scan_id: int,
@@ -250,20 +288,20 @@ class BlackBoxAPI:
         resp = self._get(vuln_group_url)
         return typing.cast(VulnPage, resp.json()["data"])
 
-    def get_groups(self, site_uuid: str, scan_id: int) -> typing.List[VulnGroup]:
+    def get_vuln_groups(self, site_uuid: str, scan_id: int) -> typing.List[VulnGroup]:
         vulns_url = urllib.parse.urljoin(
             self._url, f"sites/{site_uuid}/scans/{scan_id}/vulnerabilities"
         )
         resp = self._get(vulns_url)
         return typing.cast(typing.List[VulnGroup], resp.json()["data"])
 
-    def get_score(self, site_uuid: str, scan_id: int) -> typing.Optional[int]:
+    def get_score(self, site_uuid: str, scan_id: int) -> typing.Optional[float]:
         score_url = urllib.parse.urljoin(
             self._url, f"sites/{site_uuid}/scans/{scan_id}"
         )
         resp = self._get(score_url)
         score = resp.json()["data"]["score"]
-        return typing.cast(typing.Optional[int], score)
+        return typing.cast(typing.Optional[float], score)
 
     def create_shared_link(self, site_uuid: str, scan_id: int) -> str:
         url = urllib.parse.urljoin(
@@ -345,27 +383,63 @@ class BlackBoxOperator:
         self._api = BlackBoxAPI(url, api_token, ignore_ssl)
         self._site_uuid: typing.Optional[str] = None
         self._scan_id: typing.Optional[int] = None
+        self._group_uuid: typing.Optional[str] = None
         self._scan_finished: bool = False
 
+    def set_user_group(self, group_uuid: typing.Optional[str]) -> None:
+        group_uuid_list = self._api.get_user_group_uuids()
+        if group_uuid is None and len(group_uuid_list) == 1:
+            group_uuid = group_uuid_list[0]
+        elif group_uuid is None:
+            raise BlackBoxError(
+                "the group UUID for site is required, "
+                "use UI to create new group or choose existing one"
+            )
+        elif group_uuid not in group_uuid_list:
+            raise BlackBoxError(
+                "the group with the UUID specified was not found, "
+                "use UI to create new or choose existing one"
+            )
+        self._group_uuid = group_uuid
+
     def set_target(self, url: str, auto_create: bool) -> None:
+        assert self._group_uuid, "group not set"
+
         # FIXME: Search may not work because of URL normalization at the backend.
-        site_uuid = self._api.get_site_uuid(url)
+        site_uuid = self._api.get_site_uuid(url, self._group_uuid)
         if site_uuid is None:
             if not auto_create:
                 raise BlackBoxError(
-                    "the site with the URL specified was not found, "
+                    "the site with the URL specified was not found in the group, "
                     "use UI to create one manually, "
                     "or use --auto-create flag to do so automatically"
                 )
-            site_uuid = self._api.add_site(url)
+            site_uuid = self._api.add_site(url, self._group_uuid)
         self._site_uuid = site_uuid
 
-    def set_site_profile(self, profile_uuid: str) -> None:
+    def set_site_settings(
+        self,
+        profile_uuid: typing.Optional[str],
+        auth_uuid: typing.Optional[str],
+        api_profile_uuid: typing.Optional[str],
+    ) -> None:
         assert self._site_uuid, "target not set"
 
-        current_uuid = self._api.get_site_profile_uuid(self._site_uuid)
-        if current_uuid != profile_uuid:
-            self._api.set_site_profile_uuid(self._site_uuid, profile_uuid)
+        current_settings = self._api.get_site_settings(self._site_uuid)
+        new_profile_uuid = self._get_new_profile_uuid(current_settings, profile_uuid)
+        new_auth_uuid = self._get_new_auth_uuid(current_settings, auth_uuid)
+        new_api_profile_uuid = self._get_new_api_profile_uuid(
+            current_settings, api_profile_uuid
+        )
+        if self._is_settings_changed(
+            current_settings, new_profile_uuid, new_auth_uuid, new_api_profile_uuid
+        ):
+            self._api.set_site_settings(
+                site_uuid=self._site_uuid,
+                profile_uuid=new_profile_uuid,
+                authentication_uuid=new_auth_uuid,
+                api_profile_uuid=new_api_profile_uuid,
+            )
 
     def ensure_target_is_idle(self, previous: str) -> None:
         assert self._site_uuid, "target not set"
@@ -435,7 +509,7 @@ class BlackBoxOperator:
     ) -> TargetVulns:
         assert self._site_uuid and self._scan_id, "target or scan not set"
 
-        group_list = self._api.get_groups(self._site_uuid, self._scan_id)
+        group_list = self._api.get_vuln_groups(self._site_uuid, self._scan_id)
         vuln_report: TargetVulns = {
             "issue_groups": [],
             "error_page_groups": [],
@@ -577,7 +651,7 @@ class BlackBoxOperator:
         has_next_page = True
         page = 1  # page starts with 1
         while has_next_page is True:
-            vuln_page = self._api.get_group_page(
+            vuln_page = self._api.get_vuln_group_page(
                 self._site_uuid,
                 self._scan_id,
                 issue_type=issue_type,
@@ -591,6 +665,79 @@ class BlackBoxOperator:
             page += 1
 
         return vulns
+
+    def _get_new_profile_uuid(
+        self, current_settings: SiteSettings, profile_uuid: typing.Optional[str]
+    ) -> str:
+        if profile_uuid is None:
+            profile_uuid = current_settings["profile"]["uuid"]
+        return profile_uuid
+
+    def _get_new_auth_uuid(
+        self, current_settings: SiteSettings, auth_uuid: typing.Optional[str]
+    ) -> typing.Optional[str]:
+        if auth_uuid is None and current_settings["authentication"] is not None:
+            auth_uuid = current_settings["authentication"]["uuid"]
+        elif auth_uuid == RESET_AUTH_PROFILE:
+            auth_uuid = None
+        return auth_uuid
+
+    def _get_new_api_profile_uuid(
+        self,
+        current_settings: SiteSettings,
+        api_profile_uuid: typing.Optional[str] = None,
+    ) -> typing.Optional[str]:
+        if api_profile_uuid is None and current_settings["apiProfile"] is not None:
+            api_profile_uuid = current_settings["apiProfile"]["uuid"]
+        elif api_profile_uuid == RESET_API_PROFILE:
+            api_profile_uuid = None
+        return api_profile_uuid
+
+    def _is_scan_profile_changed(
+        self, current_scan_profile: ScanProfile, new_profile_uuid: str
+    ) -> bool:
+        return current_scan_profile["uuid"] != new_profile_uuid
+
+    def _is_auth_profile_changed(
+        self,
+        current_auth_profile: typing.Optional[AuthenticationProfile],
+        new_auth_uuid: typing.Optional[str],
+    ) -> bool:
+        return (
+            current_auth_profile is not None
+            and new_auth_uuid != current_auth_profile["uuid"]
+            or current_auth_profile is None
+            and new_auth_uuid is not None
+        )
+
+    def _is_api_profile_changed(
+        self,
+        current_api_profile: typing.Optional[APIProfile],
+        new_api_uuid: typing.Optional[str],
+    ) -> bool:
+        return (
+            current_api_profile is not None
+            and new_api_uuid != current_api_profile["uuid"]
+            or current_api_profile is None
+            and new_api_uuid is not None
+        )
+
+    def _is_settings_changed(
+        self,
+        current_settings: SiteSettings,
+        new_profile_uuid: str,
+        new_auth_uuid: typing.Optional[str],
+        new_api_profile_uuid: typing.Optional[str],
+    ) -> bool:
+        return (
+            self._is_scan_profile_changed(current_settings["profile"], new_profile_uuid)
+            or self._is_auth_profile_changed(
+                current_settings["authentication"], new_auth_uuid
+            )
+            or self._is_api_profile_changed(
+                current_settings["apiProfile"], new_api_profile_uuid
+            )
+        )
 
     @property
     def _scan_url(self) -> str:
@@ -608,6 +755,9 @@ class BlackBoxOperator:
 @click.option("--blackbox-api-token", envvar="BLACKBOX_API_TOKEN", required=True)
 @click.option("--target-url", envvar="TARGET_URL", required=True)
 @click.option(
+    "--group-uuid", envvar="GROUP_UUID", help="Set group UUID for site", default=None
+)
+@click.option(
     "--ignore-ssl",
     envvar="IGNORE_SSL",
     is_flag=True,
@@ -617,7 +767,8 @@ class BlackBoxOperator:
 @click.option(
     "--auto-create",
     is_flag=True,
-    help="Automatically create a site if a site with the target URL was not found.",
+    help="Automatically create a site if a site with the target URL "
+    "in the specified group was not found.",
 )
 @click.option(
     "--previous",
@@ -642,8 +793,20 @@ class BlackBoxOperator:
     help="Set scan profile UUID for new scan",
 )
 @click.option(
+    "--auth-profile",
+    envvar="AUTH_PROFILE",
+    help="Set authentication profile UUID for site. "
+    f"For scanning without authentication specify `{RESET_AUTH_PROFILE}` in the option",
+)
+@click.option(
+    "--api-schema",
+    envvar="API_SCHEMA",
+    help="Set API-schema UUID for site. "
+    f"For scanning without API-schema specify `{RESET_API_PROFILE}` in the option",
+)
+@click.option(
     "--fail-under-score",
-    type=click.IntRange(1, 10),
+    type=click.FloatRange(1, 10),
     default=None,
     help="Fail with exit code 3 if report scoring is less "
     "then given score (set '1' or do not set to never fail).",
@@ -658,17 +821,21 @@ def main(
     no_wait: bool,
     shared_link: bool,
     scan_profile: typing.Optional[str],
-    fail_under_score: typing.Optional[int],
+    auth_profile: typing.Optional[str],
+    api_schema: typing.Optional[str],
+    fail_under_score: typing.Optional[float],
+    group_uuid: typing.Optional[str],
 ) -> None:
     if ignore_ssl:
         warnings.simplefilter("ignore", urllib3.exceptions.InsecureRequestWarning)
 
     operator = BlackBoxOperator(blackbox_url, blackbox_api_token, ignore_ssl)
+    operator.set_user_group(group_uuid)
     operator.set_target(target_url, auto_create)
     operator.ensure_target_is_idle(previous)
 
-    if scan_profile:
-        operator.set_site_profile(scan_profile)
+    if any((scan_profile, auth_profile, api_schema)):
+        operator.set_site_settings(scan_profile, auth_profile, api_schema)
 
     operator.start_scan()
     if not no_wait:
