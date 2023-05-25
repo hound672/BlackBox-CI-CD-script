@@ -25,19 +25,22 @@ pip install -r requirements.txt
 ```
 Usage: blackbox-scan.py [OPTIONS]
 
-Options:
-  --blackbox-url TEXT
-  --blackbox-api-token TEXT       [required]
-  --target-url TEXT               [required]
+Options:                                                                  
+  --blackbox-url TEXT                                                     
+  --blackbox-api-token TEXT       [required]                              
+  --target-url TEXT               Set url of scan target.  Don't use with 
+                                  --target-file.                          
+  --target-file FILENAME          Set filename with target urls. Don't use
+                                  with --target-url.                      
   --group-uuid TEXT               Set group UUID for site
-  --ignore-ssl                    Skip verification of BlackBox API host     
+  --ignore-ssl                    Skip verification of BlackBox API host
                                   certificate.
-  --auto-create                   Automatically create a site if a site with 
-                                  the target URL in the specified group was  
+  --auto-create                   Automatically create a site if a site with
+                                  the target URL in the specified group was
                                   not found.
   --previous [wait|stop|fail]     What to do if the target is currently being
                                   scanned.
-  --no-wait                       Do not wait until the started scan is      
+  --no-wait                       Do not wait until the started scan is
                                   finished.
   --shared-link                   Create shared link for scan.
   --scan-profile TEXT             Set scan profile UUID for new scan
@@ -60,6 +63,7 @@ The following environment variables may be used instead of corresponding options
 - `BLACKBOX_URL`/`--blackbox-url`
 - `BLACKBOX_API_TOKEN`/`--blackbox-api-token`
 - `TARGET_URL`/`--target-url`
+- `TARGET_FILE`/`--target-file`
 - `IGNORE_SSL`/`--ignore-ssl`
 - `SCAN_PROFILE`/`--scan-profile`
 - `GROUP_UUID`/`--group-uuid`
@@ -81,10 +85,11 @@ python blackbox-scan.py --auto-create --previous=stop
 
 When a scan finishes without an error, the tool returns exit code `0` and prints JSON-formatted report to `stdout`. A report may be passed for processing to a tool such as [jq](https://stedolan.github.io/jq/).
 
-Example output (reformatted for readability):
+Example output for `--target-url` option (reformatted for readability):
 
 ```json
 {
+    "target_url": "http://staging.example.com/",
     "url": "https://bbs.ptsecurity.com/sites/ccb7de77-ff51-464d-bf25-7ebcfe0403d6/scans/1",
     "vulns": {
         "issue_groups": [
@@ -162,6 +167,34 @@ Example output (reformatted for readability):
     "score": 1,
     "sharedLink": "https://bbs.ptsecurity.com/shared/dee4Lyx"
 }
+```
+
+Example output for `--target-file` option (with `--no-wait` option provided and without shared link generation):
+
+```json
+[
+    {
+        "target_url": "http://first.example.com/",
+        "url": "https://bbs.ptsecurity.com/sites/ccb7de77-ff51-464d-bf25-7ebcfe0403d6/scans/1",
+        "vulns": null,
+        "score": null,
+        "sharedLink": null
+    },
+    {
+        "target_url": "http://second.example.com/",
+        "url": "https://bbs.ptsecurity.com/sites/cce4cf46-1edf-443c-ae57-5b2abc8703bd/scans/1",
+        "vulns": null,
+        "score": null,
+        "sharedLink": null
+    },
+    {
+        "target_url": "http://third.example.com/",
+        "url": "https://bbs.ptsecurity.com/sites/cbb3971e-3a22-40b9-8d43-aceca9bc4b19/scans/1",
+        "vulns": null,
+        "score": null,
+        "sharedLink": null
+    }
+]
 ```
 
 In case an error occurs, the tool returns non-zero exit code and prints error log messages to `stderr`:
