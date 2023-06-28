@@ -1,7 +1,7 @@
 openapi: 3.0.0
 info:
-  title: 'Vijn CI/CD API v.1.0'
-  description: Vijn XHR API spec
+  title: 'BlackBox CI/CD API v.1.0'
+  description: BlackBox XHR API spec
   version: 1.0.0-oas3
   contact:
     name: API Support
@@ -858,8 +858,8 @@ security:
   - apiToken: []
 
 servers:
-  - url: '{protocol}://vijn.io/app/api/v1'
-    description: vijn.io server
+  - url: '{protocol}://bbs.ptsecurity.com/app/api/v1'
+    description: bbs.ptsecurity.com server
     variables:
       protocol:
         enum:
