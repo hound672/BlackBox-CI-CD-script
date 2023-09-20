@@ -11,7 +11,7 @@ components:
   securitySchemes:
     apiToken:
       type: apiKey
-      in: header Authorization
+      in: header
       name: basic
       description: basic {apiToken}
 
@@ -38,6 +38,40 @@ components:
                 type: string
                 description: Scan profile UUID
                 example: 28b5a662-38a7-44f9-8119-ecd8d81ffa85
+              apiProfileUUID:
+                type: string
+                description: api profile UUID
+                example: 241ab3ab-c56b-4aaf-9ff7-1714ed0e7e2b
+              groupUUID:
+                type: string
+                description: group UUID
+                example: 9dd61f0d-6a3e-4e7b-97fd-8a667a076379
+    siteSettingsInputJSON:
+      description: Site settings set model
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              url:
+                $ref: '#/components/schemas/XHRSiteURL'
+              name:
+                $ref: '#/components/schemas/XHRSiteName'
+              verification:
+                $ref: '#/components/schemas/XHRVerificationData'
+              profileUUID:
+                type: string
+                description: scan profile UUID
+                example: 28b5a662-38a7-44f9-8119-ecd8d81ffa85
+              authenticationUUID:
+                type: string
+                description: authentication UUID
+                example: 28b5a662-38a7-44f9-8119-ecd8d81ffa85
+              apiProfileUUID:
+                type: string
+                description: api profile UUID
+                example: 241ab3ab-c56b-4aaf-9ff7-1714ed0e7e2b
     sharedDataInputJSON:
       required: true
       content:
@@ -51,15 +85,17 @@ components:
                 description: List of emails that have permission for reading the scan report
                 type: array
                 nullable: true
-                example: ["john@example.com"]
+                items:
+                  type: string
+                  example: john@example.com
   parameters:
-    siteID:
+    siteUUID:
       in: path
-      name: siteID
+      name: siteUUID
       schema:
-        type: integer
+        type: string
       required: true
-      description: Numerical ID of user's site
+      description: site's UUID
     scanID:
       in: path
       name: scanID
@@ -69,23 +105,23 @@ components:
       description: Numerical ID of user's scan for previously specified site
     issueTypes:
       in: path
-      name: Issue type
+      name: issueTypes
       required: true
       schema:
         type: string
         enum:
-        - issue
-        - cve
-        - error_page
+          - issue
+          - cve
+          - error_page
     groupName:
       in: path
-      name: Group name
+      name: groupName
       required: true
       schema:
         type: string
     severity:
       in: path
-      name: Severity
+      name: severity
       required: true
       schema:
         type: string
@@ -94,6 +130,30 @@ components:
           - MEDIUM
           - LOW
           - INFO
+    csrfToken:
+      in: header
+      name: X-CSRFToken
+      schema:
+        type: string
+        example: Mn1ws1YUnOG6FFQsmzyuRGwm4HuXY6yAYNaWzh9YhvMR9jrTGHcsQbF4h2RPVIaq
+      description: Value of 'csrf_token' cookie
+      required: true
+    paginationLimit:
+      in: query
+      name: limit
+      schema:
+        type: integer
+      required: false
+      description: The numbers of items to return
+      example: 10
+    paginationPage:
+      in: query
+      name: page
+      schema:
+        type: integer
+      required: false
+      description: The number of current page
+      example: 1
 
   schemas:
     baseResponse:
@@ -134,7 +194,7 @@ components:
                 details:
                   type: object
                   description: Error-specific technical details
-    siteLinkNotFound:
+    siteNotFound:
       allOf:
         - $ref: '#/components/schemas/errorResponse'
         - properties:
@@ -145,7 +205,273 @@ components:
                 code:
                   example: SITE_NOT_FOUND
                 description:
-                  example:
+                  example: The site not found
+    scanNotFound:
+      allOf:
+        - $ref: '#/components/schemas/errorResponse'
+        - properties:
+            ok:
+              example: false
+            error:
+              required:
+                - code
+              properties:
+                code:
+                  example: SCAN_NOT_FOUND
+    scanCreateLastScanProgress:
+      allOf:
+        - $ref: '#/components/schemas/errorResponse'
+        - properties:
+            ok:
+              example: false
+            error:
+              required:
+                - description
+              properties:
+                description:
+                  example: Can't start new scan, previous scan is not finished yet
+    scanAuthCheckInProgress:
+      allOf:
+        - $ref: '#/components/schemas/errorResponse'
+        - properties:
+            ok:
+              example: false
+            error:
+              required:
+                - description
+              properties:
+                description:
+                  example: Can't start scan because authentication check has not finished yet
+    scanStartTaskSend:
+      allOf:
+        - $ref: '#/components/schemas/errorResponse'
+        - properties:
+            ok:
+              example: false
+            error:
+              required:
+                - code
+                - description
+              properties:
+                code:
+                  example: SCAN_START_ERROR
+                description:
+                  example: Cannot send task start scan
+    scanStopTaskSend:
+      allOf:
+        - $ref: '#/components/schemas/errorResponse'
+        - properties:
+            ok:
+              example: false
+            error:
+              required:
+                - code
+                - description
+              properties:
+                code:
+                  example: SCAN_STOP_ERROR
+                description:
+                  example: Cannot send task stop scan
+    sitePermissionDenied:
+      allOf:
+        - $ref: '#/components/schemas/errorResponse'
+        - properties:
+            ok:
+              example: false
+            error:
+              properties:
+                code:
+                  example: PERMISSION_DENIED
+                description:
+                  example: You have no permission to make this action with site
+                details:
+                  type: object
+                  properties:
+                    permissions:
+                      type: string
+                      example: CAN_EDIT_SITE_INFO
+    siteLimitExceeded:
+      allOf:
+        - $ref: '#/components/schemas/errorResponse'
+        - properties:
+            ok:
+              example: false
+            error:
+              required:
+                - code
+              properties:
+                code:
+                  example: LIMIT_EXCEEDED
+                details:
+                  $ref: '#/components/schemas/roleAttributeDescription'
+    siteExist:
+      allOf:
+        - $ref: '#/components/schemas/errorResponse'
+        - properties:
+            ok:
+              example: false
+            error:
+              required:
+                - code
+              properties:
+                code:
+                  example: SITE_EXIST_ERROR
+    siteCannotSetUrl:
+      allOf:
+        - $ref: '#/components/schemas/errorResponse'
+        - properties:
+            ok:
+              example: false
+            error:
+              required:
+                - description
+              properties:
+                description:
+                  example: Url can't be changed after first scan
+    siteCannotSetAuth:
+      allOf:
+        - $ref: '#/components/schemas/errorResponse'
+        - properties:
+            ok:
+              example: false
+            error:
+              required:
+                - code
+                - description
+              properties:
+                code:
+                  example: SITE_CANNOT_SET_AUTH
+                description:
+                  example: Authentication cannot be set up while a scan or auth check is in progress
+    scanCannotBeStopped:
+      allOf:
+        - $ref: '#/components/schemas/errorResponse'
+        - properties:
+            ok:
+              example: false
+            error:
+              required:
+                - description
+              properties:
+                description:
+                  example: Scan can be stopped only after start
+    urlError:
+      allOf:
+        - $ref: '#/components/schemas/errorResponse'
+        - properties:
+            ok:
+              example: false
+            error:
+              required:
+                - code
+                - description
+              properties:
+                code:
+                  example: URL_ERROR
+                description:
+                  type: string
+                  example: Invalid url was passed
+    siteUrlDeniedForAnyScans:
+      allOf:
+        - $ref: '#/components/schemas/errorResponse'
+        - properties:
+            ok:
+              example: false
+            error:
+              required:
+                - code
+                - description
+              properties:
+                code:
+                  example: URL_DENIED_FOR_SCAN
+                description:
+                  type: string
+                  example: This url is denied for all scan types
+    licenseLimitExceeded:
+      allOf:
+        - $ref: '#/components/schemas/errorResponse'
+        - properties:
+            ok:
+              example: false
+            error:
+              required:
+                - code
+              properties:
+                code:
+                  example: LICENSE_LIMIT_EXCEEDED
+                details:
+                  $ref: '#/components/schemas/roleAttributeDescription'
+    profileNotFound:
+      allOf:
+        - $ref: '#/components/schemas/errorResponse'
+        - properties:
+            ok:
+              example: false
+            error:
+              required:
+                - code
+              properties:
+                code:
+                  example: PROFILE_NOT_FOUND
+    licenseInvalid:
+      allOf:
+        - $ref: '#/components/schemas/errorResponse'
+        - properties:
+            ok:
+              example: false
+            error:
+              required:
+                - code
+              properties:
+                code:
+                  example: LICENSE_ERROR
+    fetchLicense:
+      allOf:
+        - $ref: '#/components/schemas/errorResponse'
+        - properties:
+            ok:
+              example: false
+            error:
+              required:
+                - code
+              properties:
+                code:
+                  example: FETCH_LICENSE_ERROR
+    siteAuthSettingsNotFound:
+      allOf:
+        - $ref: '#/components/schemas/errorResponse'
+        - properties:
+            ok:
+              example: false
+            error:
+              required:
+                - code
+                - description
+              properties:
+                code:
+                  example: SITE_AUTHENTICATION_NOT_FOUND
+                description:
+                  type: string
+                  example: Site authentication is not found
+    groupNotFound:
+      allOf:
+        - $ref: '#/components/schemas/errorResponse'
+        - properties:
+            ok:
+              example: false
+            error:
+              required:
+                - code
+              properties:
+                code:
+                  example: GROUP_NOT_FOUND_ERROR
+    roleAttributeDescription:
+      type: object
+      properties:
+        limits:
+          type: string
+        permissions:
+          type: string
     authenticationTypesEnum:
       type: string
       nullable: false
@@ -163,16 +489,12 @@ components:
         - HTML_FILE
         - AGENT
       example: HTML_FILE
-    vulnerabilityLocaleKey:
-      type: string
-      nullable: false
-      description: String code of vulnerability description
-      example: cross_site_scripting
     ErrorReasonEnum:
       type: string
       nullable: true
       description: List of all possible scan errors
       enum:
+        - API_SCHEMA_ERROR
         - TARGET_CONNECT_FAILED
         - TARGET_CONNECTION_TIMED_OUT
         - TARGET_PAGE_IS_STATIC
@@ -183,6 +505,7 @@ components:
         - TARGET_HTTP_ERROR_404
         - TARGET_HTTP_ERROR_500
         - UNREACHABLE_REDIRECT
+        - AUTH_CHECK_FAILED
         - UNKNOWN_ERROR
       example: null
     ScanStatusEnum:
@@ -232,6 +555,24 @@ components:
         - HEAD
         - OPTIONS
       example: POST
+    AgentStatusEnum:
+      type: string
+      nullable: false
+      description: List of all possible agent states
+      enum:
+        - ACTIVE
+        - INACTIVE
+        - DELETED
+      example: ACTIVE
+    AuthStatusEnum:
+      type: string
+      nullable: false
+      description: List of possible authentication statuses
+      enum:
+        - NOT_CHECKED
+        - CHECKING
+        - SUCCESS
+        - FAILED
     XHRSiteName:
       type: string
       nullable: true
@@ -276,6 +617,59 @@ components:
           $ref: '#/components/schemas/XHRProfileShort'
         authentication:
           $ref: '#/components/schemas/XHRSiteAuthentication'
+        apiProfile:
+          $ref: '#/components/schemas/apiProfileShort'
+        group:
+          $ref: '#/components/schemas/XHRGroupShortInfo'
+    XHRSiteInfo:
+      type: object
+      description: This object represents user's site
+      properties:
+        uuid:
+          type: string
+          description: Unique UUID of site
+          nullable: false
+          example: 6ae38ae8-8c20-4b79-a7ca-b11a90121f80
+        verified:
+          type: boolean
+          nullable: false
+          example: true
+        name:
+          type: string
+          nullable: true
+          description: User-defined name of site
+          example: Company ITSM portal
+        url:
+          type: string
+          nullable: false
+          description: Target site URL. This is an entry point for all subsequent scans.
+          example: 'https://itsm.example.com/'
+        agent:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/XHRAgent'
+        createdAt:
+          type: string
+          format: date-time
+        lastScan:
+          $ref: '#/components/schemas/XHRScanShort'
+        requestFullScanStatus:
+          type: string
+          description: Contains request full scan status (field will be omitted on OnPremise)
+          enum:
+            - PENDING
+            - ACCEPTED
+            - REJECTED
+        profile:
+          $ref: '#/components/schemas/XHRProfileShort'
+        authentication:
+          $ref: '#/components/schemas/XHRSiteAuthentication'
+        authStatus:
+          $ref: '#/components/schemas/AuthStatusEnum'
+        apiProfile:
+          $ref: '#/components/schemas/apiProfileShort'
+        group:
+          $ref: '#/components/schemas/XHRGroupShortInfo'
     XHRVerificationData:
       type: object
       description: Data for site ownership verification
@@ -307,20 +701,6 @@ components:
               nullable: false
               description: ID of existing agent to use
               example: 2
-    XHRAuthenticationData:
-      type: object
-      description: 'Site authentication settings. Equals to null if authentication on this site is disabled. If authentication is enabled, at least one corresponding child property is present.'
-      nullable: true
-      required:
-        - type
-      additionalProperties: false
-      properties:
-        type:
-          $ref: '#/components/schemas/authenticationTypesEnum'
-        httpBasic:
-          $ref: '#/components/schemas/XHRSiteAuthHTTPBasic'
-        htmlFormBased:
-          $ref: '#/components/schemas/XHRSiteAuthHTMLFormBased'
     XHRSiteSettings:
       type: object
       description: This object represents current site settings
@@ -340,6 +720,8 @@ components:
           $ref: '#/components/schemas/XHRProfileShort'
         authentication:
           $ref: '#/components/schemas/XHRSiteAuthentication'
+        apiProfile:
+          $ref: '#/components/schemas/apiProfileShort'
     XHRProfileShort:
       type: object
       description: This object represents a shoft profile custom params info
@@ -373,42 +755,49 @@ components:
           example: admin
         type:
           $ref: '#/components/schemas/authProfileTypesEnum'
+    apiProfileShort:
+      type: object
+      description: This object represents an APIProfile short info
+      required:
+        - uuid
+        - name
+        - countOfSchemas
+      properties:
+        uuid:
+          type: string
+          description: UUID of APIProfile
+        name:
+          type: string
+          description: Name of APIProfile
+        countOfSchemas:
+          type: integer
+          example: 1
+          descriptions: Count of schemas
+    ScanIntegralScore:
+      type: integer
+      description: Scan's integral score
+      example: 6
+      minimum: 1
+      maximum: 10
+    XHRGroupShortInfo:
+      type: object
+      description: This object represents a short group info
+      required:
+        - uuid
+        - name
+      properties:
+        uuid:
+          type: string
+          example: 9dd61f0d-6a3e-4e7b-97fd-8a667a076379
+        name:
+          type: string
+          example: devops
     authProfileTypesEnum:
       type: string
       enum:
         - USER
         - CHAIN
       example: USER
-    XHRSiteAuthHTMLFormBased:
-      type: object
-      description: Parameters for HTML form-based authentication
-      required:
-        - username
-        - password
-        - url
-        - successString
-      additionalProperties: false
-      properties:
-        username:
-          type: string
-          minLength: 1
-          description: Username for autoform authentication
-          example: admin
-        password:
-          type: string
-          minLength: 1
-          description: Password for autoform authentication
-          example: P@ssw0rd
-        url:
-          type: string
-          minLength: 5
-          description: Form location URL
-          example: 'https://itsm.example.com/login/'
-        successString:
-          type: string
-          minLength: 3
-          description: String on target page to check if authentication was successful
-          example: My profile
     XHRVulnChannel:
       type: object
       nullable: true
@@ -423,48 +812,6 @@ components:
           nullable: false
           description: Parameter name
           example: id
-    XHRSiteAuthHTTPBasic:
-      type: object
-      description: Parameters for HTTP basic authentication
-      required:
-        - username
-        - password
-      additionalProperties: false
-      properties:
-        username:
-          type: string
-          description: Username for HTTP authentication
-          minLength: 1
-          example: admin
-        password:
-          type: string
-          description: Password for HTTP authentication
-          minLength: 1
-          example: P@ssw0rd
-    XHRDetectedApp:
-      type: object
-      description: Application found on server
-      properties:
-        id:
-          type: integer
-          nullable: false
-          description: Application's id
-          example: 2
-        name:
-          type: string
-          nullable: false
-          description: Application name
-          example: Joomla
-        version:
-          type: string
-          nullable: false
-          description: Application version
-          example: 12.4.2
-        language:
-          type: string
-          nullable: false
-          description: Application programming language
-          example: PHP
     XHRScanShort:
       type: object
       description: This object represents a single scan
@@ -502,6 +849,13 @@ components:
           type: integer
           nullable: true
           example: 2
+        score:
+          $ref: '#/components/schemas/ScanIntegralScore'
+        profile:
+          $ref: '#/components/schemas/XHRProfileShort'
+        authentication:
+          $ref: '#/components/schemas/XHRSiteAuthentication'
+
     XHRVulnerabilityGroup:
       type: object
       description: This object represents a single found grouped vulnerability
@@ -538,7 +892,35 @@ components:
             - $ref: '#/components/schemas/XHRVulnerabilityCVEApprovedType'
             - $ref: '#/components/schemas/XHRVulnerabilityErrorPageType'
             - $ref: '#/components/schemas/XHRVulnerabilityAppsType'
-
+    XHRAgent:
+      type: object
+      description: Agent entitiy for /agents
+      properties:
+        id:
+          type: integer
+          description: Unique agent id (user scope)
+          example: 4
+        name:
+          type: string
+          description: User-defined name of current agent
+          example: Virtual linux machine in DMZ
+        status:
+          $ref: '#/components/schemas/AgentStatusEnum'
+        createdAt:
+          nullable: true
+          type: string
+          format: date-time
+          description: Date-time of agent activation
+        connectedAt:
+          nullable: true
+          type: string
+          format: date-time
+          description: Datetime of last agent connect action
+        disconnectedAt:
+          nullable: true
+          type: string
+          format: date-time
+          description: Datetime of last agent disconnect action
     VulnerabilityStats:
       type: object
       properties:
@@ -695,7 +1077,7 @@ components:
         matches:
           type: array
           items:
-            type: str
+            type: string
             example: Apache/2.4.43
     XHRVulnerabilityErrorPageType:
       type: object
@@ -791,7 +1173,6 @@ components:
           nullable: false
           description: Current page number
           example: 1
-
     sharedLinkTtlEnum:
       type: integer
       nullable: true
@@ -803,6 +1184,25 @@ components:
         - 720
         - 4320
       example: 24
+    groupTypesEnum:
+      type: string
+      enum:
+        - PRODUCT
+        - USER
+      example: USER
+    roleNameConstantsEnum:
+      type: string
+      description: PT BlackBox roles
+        - BASIC_API_TOKEN
+        - GUEST
+        - BASIC_UNVERIFIED_USER
+        - BASIC_VERIFIED_USER
+        - AUDITOR
+        - OPERATOR
+        - MODERATOR
+        - MANAGER
+        - ADMIN
+      example: OPERATOR
     SharedLinkCreated:
       type: object
       description: This object represents a shared link created info
@@ -817,7 +1217,9 @@ components:
           description: List of emails that has permission for reading the scan report
           type: array
           nullable: true
-          example: [ john@example.com ]
+          items:
+            type: string
+            example: john@example.com
     VulnerabilityIssueTypeEnum:
       type: string
       nullable: false
@@ -853,9 +1255,27 @@ components:
         uuid:
           type: string
           example: ca73e0f5-d286-457c-9ec2-deca88a38ecc
+    XHRGroupRoleShortInfo:
+      type: object
+      description: This object represents a group info with total users count
+      required:
+        - uuid
+        - name
+        - type
+      properties:
+        uuid:
+          type: string
+          example: 9dd61f0d-6a3e-4e7b-97fd-8a667a076379
+        name:
+          type: string
+          example: devops
+        type:
+          $ref: '#/components/schemas/groupTypesEnum'
+        role:
+          $ref: '#/components/schemas/roleNameConstantsEnum'
 
 security:
-  - apiToken: []
+  - apiToken: [ ]
 
 servers:
   - url: '{protocol}://bbs.ptsecurity.com/app/api/v1'
@@ -877,6 +1297,8 @@ tags:
     description: 'Auth profiles endpoints'
   - name: auth chains
     description: 'Auth chains endpoints'
+  - name: groups
+    description: 'groups management'
 
 paths:
   /sites:
@@ -899,13 +1321,13 @@ paths:
                         items:
                           $ref: '#/components/schemas/XHRSiteShort'
                         nullable: false
-  '/sites/{siteID}':
+  '/sites/{siteUUID}':
     get:
       summary: Get full information about specified site
       tags:
         - sites (general)
       parameters:
-        - $ref: '#/components/parameters/siteID'
+        - $ref: '#/components/parameters/siteUUID'
       responses:
         '200':
           description: Successful response
@@ -917,19 +1339,21 @@ paths:
                   - type: object
                     properties:
                       data:
-                        $ref: '#/components/schemas/XHRSiteShort'
+                        $ref: '#/components/schemas/XHRSiteInfo'
                     nullable: false
         '404':
           description: Not found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/siteLinkNotFound'
+                $ref: '#/components/schemas/siteNotFound'
   /sites/add:
     post:
       summary: Create new site
       tags:
         - sites (general)
+      parameters:
+        - $ref: '#/components/parameters/csrfToken'
       requestBody:
         $ref: '#/components/requestBodies/siteInputJSON'
       responses:
@@ -943,15 +1367,49 @@ paths:
                   - type: object
                     properties:
                       data:
-                        $ref: '#/components/schemas/XHRSiteShort'
+                        $ref: '#/components/schemas/XHRSiteInfo'
                     nullable: false
-  '/sites/{siteID}/settings':
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/urlError'
+                  - $ref: '#/components/schemas/siteAuthSettingsNotFound'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/sitePermissionDenied'
+                  - $ref: '#/components/schemas/siteLimitExceeded'
+                  - $ref: '#/components/schemas/siteExist'
+                  - $ref: '#/components/schemas/siteUrlDeniedForAnyScans'
+                  - $ref: '#/components/schemas/licenseLimitExceeded'
+                  - $ref: '#/components/schemas/licenseInvalid'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/profileNotFound'
+                  - $ref: '#/components/schemas/groupNotFound'
+        '503':
+          description: Service unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/fetchLicense'
+  '/sites/{siteUUID}/settings':
     get:
       summary: Get site settings
       tags:
         - sites (general)
       parameters:
-        - $ref: '#/components/parameters/siteID'
+        - $ref: '#/components/parameters/siteUUID'
       responses:
         '200':
           description: Successful response
@@ -964,29 +1422,68 @@ paths:
                     properties:
                       data:
                         $ref: '#/components/schemas/XHRSiteSettings'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/siteNotFound'
     post:
       summary: Change site settings
       tags:
         - sites (general)
       parameters:
-        - $ref: '#/components/parameters/siteID'
+        - $ref: '#/components/parameters/siteUUID'
+        - $ref: '#/components/parameters/csrfToken'
       requestBody:
-        $ref: '#/components/requestBodies/siteInputJSON'
+        $ref: '#/components/requestBodies/siteSettingsInputJSON'
       responses:
         '200':
           description: Successful response
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/baseResponse'
-
-  '/sites/{siteID}/start':
+                allOf:
+                  - $ref: '#/components/schemas/baseResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/XHRSiteSettings'
+        '400':
+          description: Specified auth profile was not found
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/urlError'
+                  - $ref: '#/components/schemas/siteAuthSettingsNotFound'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/sitePermissionDenied'
+                  - $ref: '#/components/schemas/siteExist'
+                  - $ref: '#/components/schemas/siteUrlDeniedForAnyScans'
+                  - $ref: '#/components/schemas/siteCannotSetUrl'
+                  - $ref: '#/components/schemas/siteCannotSetAuth'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/siteNotFound'
+                  - $ref: '#/components/schemas/profileNotFound'
+  '/sites/{siteUUID}/start':
     post:
       summary: Start scan for specified site
       tags:
         - sites (general)
       parameters:
-        - $ref: '#/components/parameters/siteID'
+        - $ref: '#/components/parameters/siteUUID'
+        - $ref: '#/components/parameters/csrfToken'
       responses:
         '202':
           description: Successful response
@@ -1016,13 +1513,42 @@ paths:
                             example: SCAN_ALREADY_STARTED
                           description:
                             example: You have already started scan for this site. Click stop and the start to restart the scan.
-  '/sites/{siteID}/stop':
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/sitePermissionDenied'
+                  - $ref: '#/components/schemas/licenseLimitExceeded'
+                  - $ref: '#/components/schemas/licenseInvalid'
+                  - $ref: '#/components/schemas/siteLimitExceeded'
+                  - $ref: '#/components/schemas/scanCreateLastScanProgress'
+                  - $ref: '#/components/schemas/scanAuthCheckInProgress'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/siteNotFound'
+                  - $ref: '#/components/schemas/scanNotFound'
+        '503':
+          description: Service unavailable
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/fetchLicense'
+                  - $ref: '#/components/schemas/scanStartTaskSend'
+  '/sites/{siteUUID}/stop':
     post:
       summary: Stop scan for specified site
       tags:
         - sites (general)
       parameters:
-        - $ref: '#/components/parameters/siteID'
+        - $ref: '#/components/parameters/siteUUID'
+        - $ref: '#/components/parameters/csrfToken'
       responses:
         '200':
           description: Successful response
@@ -1030,13 +1556,37 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/baseResponse'
-  '/sites/{siteID}/scans/{scanID}':
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/sitePermissionDenied'
+                  - $ref: '#/components/schemas/scanCannotBeStopped'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/siteNotFound'
+                  - $ref: '#/components/schemas/scanNotFound'
+        '503':
+          description: Service unavailable
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/fetchLicense'
+                  - $ref: '#/components/schemas/scanStopTaskSend'
+  '/sites/{siteUUID}/scans/{scanID}':
     get:
       summary: Get detailed information about specified scan
       tags:
         - sites (scans)
       parameters:
-        - $ref: '#/components/parameters/siteID'
+        - $ref: '#/components/parameters/siteUUID'
         - $ref: '#/components/parameters/scanID'
       responses:
         '200':
@@ -1050,13 +1600,27 @@ paths:
                     properties:
                       data:
                         $ref: '#/components/schemas/XHRScanShort'
-  '/sites/{siteID}/scans/{scanID}/vulnerabilities':
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/sitePermissionDenied'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/siteNotFound'
+                  - $ref: '#/components/schemas/scanNotFound'
+  '/sites/{siteUUID}/scans/{scanID}/vulnerabilities':
     get:
       summary: Get grouped list of vulnerabilities for specified scan. Grouped by vuln's type and its severity.
       tags:
         - sites (scans)
       parameters:
-        - $ref: '#/components/parameters/siteID'
+        - $ref: '#/components/parameters/siteUUID'
         - $ref: '#/components/parameters/scanID'
       responses:
         '200':
@@ -1073,16 +1637,31 @@ paths:
                         items:
                           $ref: '#/components/schemas/XHRVulnerabilityGroup'
                         nullable: false
-
-  '/sites/{siteID}/scans/{scanID}/vulnerabilities/{issueType}/{groupName}/{severity}':
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/sitePermissionDenied'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/siteNotFound'
+                  - $ref: '#/components/schemas/scanNotFound'
+  '/sites/{siteUUID}/scans/{scanID}/vulnerabilities/{issueTypes}/{groupName}/{severity}?limit=1&page=1':
     get:
       summary: Get all vulns in group
-      description: Expand vuln's group. For create request URL use next 
+      description: Expand vuln's group. For create request URL use next
         issueType/requestKey/serverity from vulnerabilities endpoint's response
       tags:
         - sites (scans)
       parameters:
-        - $ref: '#/components/parameters/siteID'
+        - $ref: '#/components/parameters/paginationLimit'
+        - $ref: '#/components/parameters/paginationPage'
+        - $ref: '#/components/parameters/siteUUID'
         - $ref: '#/components/parameters/scanID'
         - $ref: '#/components/parameters/issueTypes'
         - $ref: '#/components/parameters/groupName'
@@ -1106,17 +1685,30 @@ paths:
                                 type: array
                                 items:
                                   oneOf:
-                                  - $ref: '#/components/schemas/XHRVulnerabilityIssueType'
-                                  - $ref: '#/components/schemas/XHRVulnerabilityCVEType'
-                                  - $ref: '#/components/schemas/XHRVulnerabilityErrorPageType'
-
-  '/sites/{siteID}/scans/{scanID}/shared':
+                                    - $ref: '#/components/schemas/XHRVulnerabilityIssueType'
+                                    - $ref: '#/components/schemas/XHRVulnerabilityCVEType'
+                                    - $ref: '#/components/schemas/XHRVulnerabilityErrorPageType'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/sitePermissionDenied'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/siteNotFound'
+                  - $ref: '#/components/schemas/scanNotFound'
+  '/sites/{siteUUID}/scans/{scanID}/shared':
     post:
       summary: 'Create shared link for current scan'
       tags:
         - sites (scans)
       parameters:
-        - $ref: '#/components/parameters/siteID'
+        - $ref: '#/components/parameters/siteUUID'
         - $ref: '#/components/parameters/scanID'
       requestBody:
         $ref: '#/components/requestBodies/sharedDataInputJSON'
@@ -1132,6 +1724,49 @@ paths:
                     properties:
                       data:
                         $ref: '#/components/schemas/SharedLinkCreated'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/sitePermissionDenied'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/siteNotFound'
+                  - $ref: '#/components/schemas/scanNotFound'
+    get:
+      summary: 'Get shared links for current scan'
+      tags:
+        - sites (scans)
+      parameters:
+        - $ref: '#/components/parameters/siteUUID'
+        - $ref: '#/components/parameters/scanID'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/baseResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/SharedLinkCreated'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/siteNotFound'
+                  - $ref: '#/components/schemas/scanNotFound'
   /profiles:
     get:
       summary: "Get list of available profile names for current user"
@@ -1193,3 +1828,22 @@ paths:
                         type: array
                         items:
                           $ref: '#/components/schemas/XHRAuthChainInfoShort'
+  /groups:
+    get:
+      summary: Get list of groups that are available to current user
+      tags:
+        - groups
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/baseResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/XHRGroupRoleShortInfo'

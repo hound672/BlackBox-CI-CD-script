@@ -13,12 +13,12 @@ requirements-dev.txt: poetry.lock
 
 .PHONY: fmt
 fmt:
-	black --quiet .
+	brunette --quiet .
 	isort --quiet --profile=black .
 
 .PHONY: lint
 lint:
-	black --check .
+	brunette --check .
 	isort --check .
 	flake8 .
 	mypy --strict --no-error-summary .

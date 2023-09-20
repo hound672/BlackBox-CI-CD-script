@@ -17,21 +17,21 @@ pip install -r requirements.txt
 ### Synopsis
 
 ```
-  blackbox-scan.py [OPTIONS]
+  main.py [OPTIONS]
 ```
 
 ### Options
 
 ```
-Usage: blackbox-scan.py [OPTIONS]
+Usage: main.py [OPTIONS]
 
-Options:                                                                  
-  --blackbox-url TEXT                                                     
-  --blackbox-api-token TEXT       [required]                              
-  --target-url TEXT               Set url of scan target.  Don't use with 
-                                  --target-file.                          
-  --target-file FILENAME          Set filename with target urls. Don't use
-                                  with --target-url.                      
+Options:
+  --blackbox-url TEXT
+  --blackbox-api-token TEXT       [required]
+  --target-url TEXT               Set url of scan target. Do not use with
+                                  --target-file.
+  --target-file FILENAME          Set filename with target urls. Do not use
+                                  with --target-url.
   --group-uuid TEXT               Set group UUID for site
   --ignore-ssl                    Skip verification of BlackBox API host
                                   certificate.
@@ -51,8 +51,21 @@ Options:
                                   without API-schema specify `RESET` in the
                                   option
   --fail-under-score FLOAT RANGE  Fail with exit code 3 if report scoring is
-                                  less then given score (set '1' or do not set
+                                  less than given score (set "1" or do not set
                                   to never fail).  [1<=x<=10]
+  --report-dir DIRECTORY          Set directory path for storing the generated
+                                  report file. If the option is used, the
+                                  report will be saved in the specified
+                                  directory. Cannot be used with --no-wait
+                                  option. To generate a report the scan must
+                                  be finished or stopped.
+  --report-template [html|nist|oud4|owasp|owasp_mobile|pcidss|sarif|sans]
+                                  Template shortname of the report to be
+                                  generated. Specifies file format for report
+                                  in --report-dir.
+  --report-locale [ru|en]         Localization of the report file to be
+                                  generated. Specifies file localization for
+                                  report in --report-dir.
   --help                          Show this message and exit.
 ```
 
@@ -78,7 +91,7 @@ export BLACKBOX_API_TOKEN=D4OPXw7mXCWjHER0lE48PCr4UkcfD86AwOwnio9I1w3HsOSS3Hxo9x
 export TARGET_URL=http://staging.example.com/
 export GROUP_UUID=ee2e5f90-c9ee-454e-a4db-123463d29851
 
-python blackbox-scan.py --auto-create --previous=stop
+python main.py --auto-create --previous=stop --report_dir=/path/to/report/dir
 ```
 
 ## Results
@@ -91,6 +104,9 @@ Example output for `--target-url` option (reformatted for readability):
 {
     "target_url": "http://staging.example.com/",
     "url": "https://bbs.ptsecurity.com/sites/ccb7de77-ff51-464d-bf25-7ebcfe0403d6/scans/1",
+    "score": 1,
+    "sharedLink": "https://bbs.ptsecurity.com/shared/dee4Lyx",
+    "report_path": "/path/to/report/dir/20230825_182339_staging_example_com.ru.html",
     "vulns": {
         "issue_groups": [
             {
@@ -163,9 +179,7 @@ Example output for `--target-url` option (reformatted for readability):
                 ]
             }
         ]
-    },
-    "score": 1,
-    "sharedLink": "https://bbs.ptsecurity.com/shared/dee4Lyx"
+    }
 }
 ```
 
@@ -176,23 +190,26 @@ Example output for `--target-file` option (with `--no-wait` option provided and 
     {
         "target_url": "http://first.example.com/",
         "url": "https://bbs.ptsecurity.com/sites/ccb7de77-ff51-464d-bf25-7ebcfe0403d6/scans/1",
-        "vulns": null,
         "score": null,
-        "sharedLink": null
+        "sharedLink": null,
+        "report_path": null,
+        "vulns": null
     },
     {
         "target_url": "http://second.example.com/",
         "url": "https://bbs.ptsecurity.com/sites/cce4cf46-1edf-443c-ae57-5b2abc8703bd/scans/1",
-        "vulns": null,
         "score": null,
-        "sharedLink": null
+        "sharedLink": null,
+        "report_path": null,
+        "vulns": null
     },
     {
         "target_url": "http://third.example.com/",
         "url": "https://bbs.ptsecurity.com/sites/cbb3971e-3a22-40b9-8d43-aceca9bc4b19/scans/1",
-        "vulns": null,
         "score": null,
-        "sharedLink": null
+        "sharedLink": null,
+        "report_path": null,
+        "vulns": null
     }
 ]
 ```
