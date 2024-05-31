@@ -1,18 +1,25 @@
-import sys
-import typing
 from enum import Enum
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    List,
+    Literal,
+    NamedTuple,
+    Optional,
+    TypedDict,
+    TypeVar,
+)
 
-if sys.version_info >= (3, 8):
-    from typing import Literal, TypedDict
-else:
-    from typing_extensions import Literal, TypedDict
-
-VulnCommon = typing.Dict[str, typing.Any]
+VulnCommon = Dict[str, Any]
 
 
 ScanStatus = Literal[
     'CREATED', 'SENT_START_TASK', 'STARTED', 'SENT_STOP_TASK', 'STOPPED', 'FINISHED'
 ]
+
+
+OnEnvUpdater = Callable[[Dict[str, str]], None]
 
 
 class VulnGroup(TypedDict):
@@ -21,7 +28,7 @@ class VulnGroup(TypedDict):
     count: int
     # reflects group name on UI
     groupTitle: str
-    requestKey: typing.Optional[str]
+    requestKey: Optional[str]
     severity: str
     vulnerability: VulnCommon
 
@@ -32,7 +39,7 @@ class VulnPage(TypedDict):
     hasNextPage: bool
     pagesCount: int
     currentPage: int
-    items: typing.List[VulnCommon]
+    items: List[VulnCommon]
 
 
 class VulnIssue(TypedDict):
@@ -58,34 +65,49 @@ class GroupIssue(TypedDict):
     severity: str
     category: str
     group_title: str
-    vulns: typing.List[VulnIssue]
+    vulns: List[VulnIssue]
 
 
 class GroupErrorPage(TypedDict):
     group_title: str
     category: str
-    vulns: typing.List[VulnErrorPage]
+    vulns: List[VulnErrorPage]
 
 
 class GroupCve(TypedDict):
     category: str
     group_title: str
-    vulns: typing.List[VulnCve]
+    vulns: List[VulnCve]
 
 
 class TargetVulns(TypedDict):
-    issue_groups: typing.List[GroupIssue]
-    cve_groups: typing.List[GroupCve]
-    error_page_groups: typing.List[GroupErrorPage]
+    issue_groups: List[GroupIssue]
+    cve_groups: List[GroupCve]
+    error_page_groups: List[GroupErrorPage]
+
+
+class ReportScanStatus(str, Enum):
+    IN_PROGRESS = 'IN_PROGRESS'
+    STOPPED = 'STOPPED'
+    FINISHED = 'FINISHED'
+
+
+class ErrorReport(TypedDict):
+    short_info: str
+    message: str
+    json: Optional[Dict[Any, Any]]
 
 
 class ScanReport(TypedDict):
-    target_url: str
-    url: str
-    vulns: typing.Optional[TargetVulns]
-    sharedLink: typing.Optional[str]
-    score: typing.Optional[float]
-    report_path: typing.Optional[str]
+    target_url: Optional[str]
+    target_uuid: Optional[str]
+    url: Optional[str]
+    scan_status: Optional[ReportScanStatus]
+    vulns: Optional[TargetVulns]
+    sharedLink: Optional[str]
+    score: Optional[float]
+    report_path: Optional[str]
+    errors: Optional[List[ErrorReport]]
 
 
 class ScanProfile(TypedDict):
@@ -110,18 +132,18 @@ class SiteSettings(TypedDict):
     url: str
     name: str
     profile: ScanProfile
-    authentication: typing.Optional[AuthenticationProfile]
-    apiProfile: typing.Optional[APIProfile]
+    authentication: Optional[AuthenticationProfile]
+    apiProfile: Optional[APIProfile]
 
 
 class Scan(TypedDict):
-    errorReason: typing.Optional[str]
+    errorReason: Optional[str]
     id: int
     status: ScanStatus
     progress: int
     profile: ScanProfile
-    authentication: typing.Optional[AuthenticationProfile]
-    apiProfile: typing.Optional[APIProfile]
+    authentication: Optional[AuthenticationProfile]
+    apiProfile: Optional[APIProfile]
     score: float
 
 
@@ -134,11 +156,16 @@ class Site(TypedDict):
     uuid: str
     url: str
     name: str
-    lastScan: typing.Optional[Scan]
+    lastScan: Optional[Scan]
     profile: ScanProfile
-    authentication: typing.Optional[AuthenticationProfile]
-    apiProfile: typing.Optional[APIProfile]
+    authentication: Optional[AuthenticationProfile]
+    apiProfile: Optional[APIProfile]
     group: SiteGroupInfo
+
+
+class UserGroupType(str, Enum):
+    PRODUCT = 'PRODUCT'
+    USER = 'USER'
 
 
 class UserGroupInfo(SiteGroupInfo):
@@ -146,13 +173,13 @@ class UserGroupInfo(SiteGroupInfo):
     role: str
 
 
-class UrlParts(typing.NamedTuple):
+class UrlParts(NamedTuple):
     scheme: str
     hostname: str
-    port: typing.Optional[int]
-    path: typing.Optional[str]
-    query: typing.Optional[str]
-    fragment: typing.Optional[str]
+    port: Optional[int]
+    path: Optional[str]
+    query: Optional[str]
+    fragment: Optional[str]
 
 
 class ReportTemplateShortname(str, Enum):
@@ -184,3 +211,68 @@ class ReportHTMLTemplate(str, Enum):
     PCIDSS = 'pcidss'
     PLAIN = 'plain'
     SANS = 'sans'
+
+
+class AuthenticationType(str, Enum):
+    HTTP_BASIC = 'httpBasic'
+    HTML_AUTO_FORM = 'htmlAutoForm'
+    HTML_FORM_BASED = 'htmlFormBased'
+    RAW_COOKIE = 'rawCookie'
+    API_KEY = 'apiKey'
+    BEARER = 'bearer'
+
+
+class ApiKeyPlace(str, Enum):
+    COOKIE = 'COOKIE'
+    HEADER = 'HEADER'
+    QUERY = 'QUERY'
+
+
+class Authentication(TypedDict):
+    pass
+
+
+class HttpBasic(Authentication):
+    username: str
+    password: str
+
+
+class HtmlAutoForm(Authentication):
+    username: str
+    password: str
+    formUrl: str
+    successString: str
+
+
+class HtmlFormBased(Authentication):
+    formUrl: str
+    formXPath: str
+    usernameField: str
+    usernameValue: str
+    passwordField: str
+    passwordValue: str
+    regexpOfSuccess: str
+    submitValue: Optional[str]
+
+
+class RawCookie(Authentication):
+    cookies: List[str]
+    successUrl: str
+    regexpOfSuccess: str
+
+
+class ApiKey(Authentication):
+    place: ApiKeyPlace
+    name: str
+    value: str
+    successUrl: str
+    successString: Optional[str]
+
+
+class Bearer(Authentication):
+    token: str
+    successUrl: str
+    successString: Optional[str]
+
+
+ReturnType = TypeVar('ReturnType')

@@ -2,11 +2,10 @@ import json
 import logging
 import sys
 import time
-import typing
 import warnings
+from typing import Any, Callable, Dict, List, Optional, TextIO
 
 import click
-import requests
 import urllib3.exceptions
 from requests.adapters import HTTPAdapter, Retry
 
@@ -15,8 +14,12 @@ from blackbox_ci.blackbox_operator import BlackBoxOperator
 from blackbox_ci.consts import (
     API_SCHEMA_ENV,
     API_SCHEMA_OPTION,
+    AUTH_API_KEY_VALUE_ENV,
+    AUTH_DATA_OPTION,
+    AUTH_PASSWORD_ENV,
     AUTH_PROFILE_ENV,
     AUTH_PROFILE_OPTION,
+    AUTH_TOKEN_ENV,
     AUTO_CREATE_OPTION,
     BLACKBOX_API_TOKEN_ENV,
     BLACKBOX_API_TOKEN_OPTION,
@@ -35,6 +38,8 @@ from blackbox_ci.consts import (
     REPORT_TEMPLATE_OPTION,
     RESET_API_PROFILE,
     RESET_AUTH_PROFILE,
+    RESULTS_ONLY_OPTION,
+    SCAN_ID_OPTION,
     SCAN_PROFILE_ENV,
     SCAN_PROFILE_OPTION,
     SCORE_FAIL_EXIT_CODE,
@@ -47,59 +52,108 @@ from blackbox_ci.consts import (
     TARGET_FILE_OPTION,
     TARGET_URL_ENV,
     TARGET_URL_OPTION,
+    TARGET_UUID_ENV,
+    TARGET_UUID_OPTION,
 )
 from blackbox_ci.errors import (
     BlackBoxError,
-    BlackBoxHTTPError,
-    BlackBoxUrlError,
+    BlackBoxInitError,
+    ScanFailedError,
     ScoreFailError,
 )
+from blackbox_ci.files import read_key_value_pairs
 from blackbox_ci.options import (
     EnumChoice,
+    check_auth_options,
     check_report_output_options,
     check_target_source,
+    update_auth_data_on_env,
 )
-from blackbox_ci.types import ReportLocale, ReportTemplateShortname, ScanReport
+from blackbox_ci.types import (
+    ErrorReport,
+    ReportLocale,
+    ReportTemplateShortname,
+    ScanReport,
+)
+
+
+def collect_scan_report(
+    *,
+    operator: BlackBoxOperator,
+    target_url: Optional[str],
+    target_uuid: Optional[str],
+    auto_create: bool,
+    shared_link: bool,
+    group_uuid: Optional[str],
+    report_dir: Optional[str],
+    report_template: ReportTemplateShortname,
+    report_locale: ReportLocale,
+    scan_id: Optional[int],
+    **_: Any,
+) -> ScanReport:
+    operator.set_target(
+        url=target_url, uuid=target_uuid, group_uuid=group_uuid, auto_create=auto_create
+    )
+    operator.set_scan(scan_id=scan_id)
+    report_path: Optional[str] = (
+        operator.generate_report_file(
+            locale=report_locale,
+            template_shortname=report_template,
+            output_dir=report_dir,
+        )
+        if report_dir is not None
+        else None
+    )
+    report: ScanReport = operator.get_scan_report(
+        target_url=target_url,
+        shared_link=shared_link,
+        report_path=report_path,
+        partial_results=True,
+    )
+    return report
 
 
 def run_target_scan(
     *,
-    blackbox_url: str,
-    blackbox_api_token: str,
-    target_url: str,
-    ignore_ssl: bool,
+    operator: BlackBoxOperator,
+    target_url: Optional[str],
+    target_uuid: Optional[str],
     auto_create: bool,
     previous: str,
-    no_wait: bool,
+    skip_wait_step: bool,
     shared_link: bool,
-    scan_profile: typing.Optional[str],
-    auth_profile: typing.Optional[str],
-    api_schema: typing.Optional[str],
-    group_uuid: typing.Optional[str],
-    report_dir: typing.Optional[str],
+    scan_profile_uuid: Optional[str],
+    auth_profile_uuid: Optional[str],
+    api_profile_uuid: Optional[str],
+    group_uuid: Optional[str],
+    report_dir: Optional[str],
     report_template: ReportTemplateShortname,
     report_locale: ReportLocale,
+    auth_data: Dict[str, str],
+    **_: Any,
 ) -> ScanReport:
-    retry = Retry(
-        total=SERVER_RETRY_MAX_ATTEMPTS,
-        status_forcelist=SERVER_RETRY_STATUSES,
-        backoff_factor=SERVER_RETRY_BACKOFF_FACTOR,
-        raise_on_status=False,
+    operator.set_target(
+        url=target_url, uuid=target_uuid, group_uuid=group_uuid, auto_create=auto_create
     )
-    adapter = HTTPAdapter(max_retries=retry)
-    api = BlackBoxAPI(blackbox_url, blackbox_api_token, ignore_ssl, adapter=adapter)
-    operator = BlackBoxOperator(blackbox_url, api=api)
 
-    operator.set_user_group(group_uuid)
-    operator.set_target(target_url, auto_create)
-    operator.ensure_target_is_idle(previous)
+    operator.ensure_target_is_idle(previous=previous)
+    if auth_data:
+        # for multiple targets from the same group create auth profile only once
+        auth_profile_uuid = auth_data.get('uuid') or operator.create_auth_profile(
+            auth_data=auth_data
+        )
+        auth_data['uuid'] = auth_profile_uuid
 
-    if any((scan_profile, auth_profile, api_schema)):
-        operator.set_site_settings(scan_profile, auth_profile, api_schema)
+    if any((scan_profile_uuid, auth_profile_uuid, api_profile_uuid)):
+        operator.set_site_settings(
+            profile_uuid=scan_profile_uuid,
+            auth_uuid=auth_profile_uuid,
+            api_profile_uuid=api_profile_uuid,
+        )
 
     operator.start_scan()
-    report_path = None
-    if not no_wait:
+    report_path: Optional[str] = None
+    if not skip_wait_step:
         operator.wait_for_scan()
         if report_dir is not None:
             report_path = operator.generate_report_file(
@@ -107,21 +161,77 @@ def run_target_scan(
                 template_shortname=report_template,
                 output_dir=report_dir,
             )
-    return operator.get_scan_report(target_url, shared_link, report_path)
+    report: ScanReport = operator.get_scan_report(
+        target_url=target_url, shared_link=shared_link, report_path=report_path
+    )
+    return report
 
 
-def check_errors(failed_targets: typing.List[str]) -> None:
-    if failed_targets:
-        failed_targets_message = '"\n"'.join(failed_targets)
-        raise BlackBoxError(
-            f'errors occurred for targets:\n"{failed_targets_message}"\n'
-            f'See error log above'
+def handle_scan_target(
+    *,
+    handler: Callable[..., ScanReport],
+    target_url: Optional[str],
+    target_uuid: Optional[str],
+    blackbox_url: str,
+    blackbox_api_token: str,
+    ignore_ssl: bool,
+    shared_link: bool,
+    **kwargs: Any,
+) -> ScanReport:
+    try:
+        retry = Retry(
+            total=SERVER_RETRY_MAX_ATTEMPTS,
+            status_forcelist=SERVER_RETRY_STATUSES,
+            backoff_factor=SERVER_RETRY_BACKOFF_FACTOR,
+            raise_on_status=False,
+        )
+        adapter = HTTPAdapter(max_retries=retry)
+        api = BlackBoxAPI(
+            base_url=blackbox_url,
+            api_token=blackbox_api_token,
+            ignore_ssl=ignore_ssl,
+            adapter=adapter,
+        )
+        operator = BlackBoxOperator(url=blackbox_url, api=api)
+    except BlackBoxInitError as err:
+        return BlackBoxOperator.get_init_error_report(
+            target_url=target_url,
+            target_uuid=target_uuid,
+            report_path=None,
+            error=err,
+        )
+
+    try:
+        return handler(
+            operator=operator,
+            target_url=target_url,
+            target_uuid=target_uuid,
+            shared_link=shared_link,
+            **kwargs,
+        )
+    except BlackBoxError as err:
+        return operator.get_error_report(
+            target_url=target_url,
+            target_uuid=target_uuid,
+            report_path=None,
+            shared_link=shared_link,
+            error=err,
         )
 
 
+def check_errors(failed_targets: List[str]) -> None:
+    if failed_targets:
+        failed_targets_message = '"\n"'.join(failed_targets)
+        logging.error(
+            f'errors occurred for targets:\n"{failed_targets_message}"\n'
+            f'See error log above'
+        )
+        raise ScanFailedError()
+
+
 def check_reports(
-    reports: typing.List[ScanReport],
-    fail_under_score: typing.Optional[float],
+    reports: List[ScanReport],
+    fail_under_score: Optional[float],
 ) -> None:
     if fail_under_score is not None:
         for report in reports:
@@ -129,119 +239,81 @@ def check_reports(
                 raise ScoreFailError()
 
 
-def log_current_target(target_list: typing.List[str], target: str) -> None:
+def log_current_target(target_list: List[str], target: str) -> None:
     count = target_list.count(target)
     if count > 1:
         logging.warning(f'Target {target} is repeated in list {count} times')
     logging.info(f'Starting scan for target `{target}`')
 
 
-def log_http_error(err: BlackBoxHTTPError) -> None:
-    verbose = ''
-    if isinstance(err.response, requests.Response):
-        if err.response.headers['Content-Type'] == 'application/json':
-            body_json = err.response.json()
-            verbose = json.dumps(body_json, indent=2)
+def log_report_errors(errors: List[ErrorReport]) -> None:
+    for err in errors:
+        short_info = err['short_info']
+        message = err['message']
+        verbose = ''
+        if err['json']:
+            verbose = json.dumps(err['json'], indent=2)
             verbose = f'\n{verbose}'
-    logging.error(f'BlackBox API call failed: {err}{verbose}')
+        logging.error(f'{short_info}: {message}{verbose}')
 
 
-def scan_target_list(
+def process_target_list(
     *,
-    blackbox_url: str,
-    blackbox_api_token: str,
-    target_list: typing.List[str],
-    ignore_ssl: bool,
-    auto_create: bool,
-    previous: str,
-    no_wait: bool,
-    shared_link: bool,
-    scan_profile: typing.Optional[str],
-    auth_profile: typing.Optional[str],
-    api_schema: typing.Optional[str],
-    fail_under_score: typing.Optional[float],
-    group_uuid: typing.Optional[str],
-    report_dir: typing.Optional[str],
-    report_template: ReportTemplateShortname,
-    report_locale: ReportLocale,
+    target_list: List[str],
+    fail_under_score: Optional[float],
+    auth_data: Optional[TextIO],
+    **kwargs: Any,
 ) -> None:
+    common_auth_profile_data = (
+        read_key_value_pairs(auth_data, on_env_updater=update_auth_data_on_env)
+        if auth_data
+        else None
+    )
     reports = []
     failed_targets = []
     unique_targets = set(target_list)
     for target in unique_targets:
         log_current_target(target_list, target)
-        try:
-            report = run_target_scan(
-                blackbox_url=blackbox_url,
-                blackbox_api_token=blackbox_api_token,
-                target_url=target,
-                ignore_ssl=ignore_ssl,
-                auto_create=auto_create,
-                previous=previous,
-                no_wait=no_wait,
-                shared_link=shared_link,
-                scan_profile=scan_profile,
-                auth_profile=auth_profile,
-                api_schema=api_schema,
-                group_uuid=group_uuid,
-                report_dir=report_dir,
-                report_template=report_template,
-                report_locale=report_locale,
-            )
-        except BlackBoxHTTPError as error:
-            log_http_error(error)
+
+        report = handle_scan_target(
+            auth_data=common_auth_profile_data,
+            target_url=target,
+            target_uuid=None,
+            **kwargs,
+        )
+        errors = report['errors']
+        if errors:
+            log_report_errors(errors)
             failed_targets.append(target)
-        except BlackBoxError as error:
-            logging.error(f'BlackBox error: {error}')
-            failed_targets.append(target)
-        else:
-            reports.append(report)
-            time.sleep(3.0)
+        reports.append(report)
+        time.sleep(3.0)
 
     print(json.dumps(reports))
     check_errors(failed_targets)
     check_reports(reports, fail_under_score)
 
 
-def scan_single_target(
+def process_single_target(
     *,
-    blackbox_url: str,
-    blackbox_api_token: str,
-    target_url: str,
-    ignore_ssl: bool,
-    auto_create: bool,
-    previous: str,
-    no_wait: bool,
-    shared_link: bool,
-    scan_profile: typing.Optional[str],
-    auth_profile: typing.Optional[str],
-    api_schema: typing.Optional[str],
-    fail_under_score: typing.Optional[float],
-    group_uuid: typing.Optional[str],
-    report_dir: typing.Optional[str],
-    report_template: ReportTemplateShortname,
-    report_locale: ReportLocale,
+    fail_under_score: Optional[float],
+    auth_data: Optional[TextIO],
+    **kwargs: Any,
 ) -> None:
-    report = run_target_scan(
-        blackbox_url=blackbox_url,
-        blackbox_api_token=blackbox_api_token,
-        target_url=target_url,
-        ignore_ssl=ignore_ssl,
-        auto_create=auto_create,
-        previous=previous,
-        no_wait=no_wait,
-        shared_link=shared_link,
-        scan_profile=scan_profile,
-        auth_profile=auth_profile,
-        api_schema=api_schema,
-        group_uuid=group_uuid,
-        report_dir=report_dir,
-        report_template=report_template,
-        report_locale=report_locale,
+    auth_profile_data = (
+        read_key_value_pairs(auth_data, on_env_updater=update_auth_data_on_env)
+        if auth_data
+        else None
     )
+    report = handle_scan_target(auth_data=auth_profile_data, **kwargs)
+    errors = report['errors']
+    if errors:
+        log_report_errors(errors)
+
     print(json.dumps(report))
 
-    if (
+    if errors:
+        raise ScanFailedError()
+    elif (
         report['score'] is not None
         and fail_under_score is not None
         and report['score'] < fail_under_score
@@ -258,14 +330,23 @@ def scan_single_target(
     TARGET_URL_OPTION,
     envvar=TARGET_URL_ENV,
     default=None,
-    help=f'Set url of scan target. Do not use with {TARGET_FILE_OPTION}.',
+    help=f'Set url of scan target. '
+    f'Do not use with {TARGET_FILE_OPTION}, {TARGET_UUID_OPTION}.',
 )
 @click.option(
     TARGET_FILE_OPTION,
     envvar=TARGET_FILE_ENV,
     type=click.File('r'),
     default=None,
-    help=f'Set filename with target urls. Do not use with {TARGET_URL_OPTION}.',
+    help=f'Set filename with target urls. '
+    f'Do not use with {TARGET_URL_OPTION}, {TARGET_UUID_OPTION}.',
+)
+@click.option(
+    TARGET_UUID_OPTION,
+    envvar=TARGET_UUID_ENV,
+    default=None,
+    help=f'Set uuid of scan target. '
+    f'Do not use with {TARGET_URL_OPTION}, {TARGET_FILE_OPTION}.',
 )
 @click.option(
     GROUP_UUID_OPTION,
@@ -305,17 +386,21 @@ def scan_single_target(
 )
 @click.option(
     SCAN_PROFILE_OPTION,
+    'scan_profile_uuid',
     envvar=SCAN_PROFILE_ENV,
     help='Set scan profile UUID for new scan',
 )
 @click.option(
     AUTH_PROFILE_OPTION,
+    'auth_profile_uuid',
     envvar=AUTH_PROFILE_ENV,
     help='Set authentication profile UUID for site. '
+    f'Cannot be used with {AUTH_DATA_OPTION} option. '
     f'For scanning without authentication specify `{RESET_AUTH_PROFILE}` in the option',
 )
 @click.option(
     API_SCHEMA_OPTION,
+    'api_profile_uuid',
     envvar=API_SCHEMA_ENV,
     help='Set API-schema UUID for site. '
     f'For scanning without API-schema specify `{RESET_API_PROFILE}` in the option',
@@ -352,69 +437,130 @@ def scan_single_target(
     help='Localization of the report file to be generated. '
     f'Specifies file localization for report in {REPORT_DIR_OPTION}.',
 )
+@click.option(
+    RESULTS_ONLY_OPTION,
+    is_flag=True,
+    help='Only get results of specified site. '
+    'Last scan results by default. '
+    f'Use {SCAN_ID_OPTION} option to get results of specific scan.',
+)
+@click.option(
+    SCAN_ID_OPTION,
+    type=click.IntRange(1),
+    default=None,
+    help='Set the scan ID to get the results. '
+    f'Can be used without {RESULTS_ONLY_OPTION} option.',
+)
+@click.option(
+    AUTH_DATA_OPTION,
+    type=click.File('r'),
+    default=None,
+    help='Set path to file with authentication data. '
+    'If this option is used, a new authentication profile '
+    'with the data provided will be created and used for new scan. '
+    f'Cannot be used with {AUTH_PROFILE_OPTION} option. '
+    'It is highly recommended to use environment variables '
+    'to store passwords, tokens and api keys: '
+    f'{AUTH_PASSWORD_ENV}, {AUTH_TOKEN_ENV}, {AUTH_API_KEY_VALUE_ENV}',
+)
 def run_command(
     blackbox_url: str,
     blackbox_api_token: str,
-    target_url: str,
-    target_file: typing.TextIO,
+    target_url: Optional[str],
+    target_file: Optional[TextIO],
+    target_uuid: Optional[str],
     ignore_ssl: bool,
     auto_create: bool,
     previous: str,
     no_wait: bool,
     shared_link: bool,
-    scan_profile: typing.Optional[str],
-    auth_profile: typing.Optional[str],
-    api_schema: typing.Optional[str],
-    fail_under_score: typing.Optional[float],
-    group_uuid: typing.Optional[str],
-    report_dir: typing.Optional[str],
+    scan_profile_uuid: Optional[str],
+    auth_profile_uuid: Optional[str],
+    api_profile_uuid: Optional[str],
+    fail_under_score: Optional[float],
+    group_uuid: Optional[str],
+    report_dir: Optional[str],
     report_template: ReportTemplateShortname,
     report_locale: ReportLocale,
+    results_only: bool,
+    scan_id: Optional[int],
+    auth_data: Optional[TextIO],
 ) -> None:
-    check_target_source(target_url=target_url, target_file=target_file)
-    check_report_output_options(report_dir=report_dir, no_wait=no_wait)
+    check_target_source(
+        target_url=target_url,
+        target_file=target_file,
+        target_uuid=target_uuid,
+        auto_create=auto_create,
+    )
+    check_report_output_options(
+        report_dir=report_dir,
+        no_wait=no_wait,
+        scan_id=scan_id,
+        results_only=results_only,
+    )
+    check_auth_options(
+        auth_profile_uuid=auth_profile_uuid,
+        auth_data=auth_data,
+        scan_id=scan_id,
+        results_only=results_only,
+    )
 
     if ignore_ssl:
         warnings.simplefilter('ignore', urllib3.exceptions.InsecureRequestWarning)
 
+    handler: Callable[..., ScanReport]
+    if results_only or scan_id:
+        handler = collect_scan_report
+    else:
+        handler = run_target_scan
+
     if target_file:
         target_list = target_file.read().splitlines()
-        scan_target_list(
+        process_target_list(
+            handler=handler,
             blackbox_url=blackbox_url,
             blackbox_api_token=blackbox_api_token,
             target_list=target_list,
             ignore_ssl=ignore_ssl,
             auto_create=auto_create,
             previous=previous,
-            no_wait=no_wait,
+            skip_wait_step=no_wait,
             shared_link=shared_link,
-            scan_profile=scan_profile,
-            auth_profile=auth_profile,
-            api_schema=api_schema,
+            scan_profile_uuid=scan_profile_uuid,
+            auth_profile_uuid=auth_profile_uuid,
+            api_profile_uuid=api_profile_uuid,
             fail_under_score=fail_under_score,
             group_uuid=group_uuid,
             report_dir=report_dir,
             report_template=report_template,
             report_locale=report_locale,
+            results_only=results_only,
+            scan_id=scan_id,
+            auth_data=auth_data,
         )
-    elif target_url:
-        scan_single_target(
+    elif target_url or target_uuid:
+        process_single_target(
+            handler=handler,
             blackbox_url=blackbox_url,
             blackbox_api_token=blackbox_api_token,
             target_url=target_url,
+            target_uuid=target_uuid,
             ignore_ssl=ignore_ssl,
             auto_create=auto_create,
             previous=previous,
-            no_wait=no_wait,
+            skip_wait_step=no_wait,
             shared_link=shared_link,
-            scan_profile=scan_profile,
-            auth_profile=auth_profile,
-            api_schema=api_schema,
+            scan_profile_uuid=scan_profile_uuid,
+            auth_profile_uuid=auth_profile_uuid,
+            api_profile_uuid=api_profile_uuid,
             fail_under_score=fail_under_score,
             group_uuid=group_uuid,
             report_dir=report_dir,
             report_template=report_template,
             report_locale=report_locale,
+            results_only=results_only,
+            scan_id=scan_id,
+            auth_data=auth_data,
         )
 
 
@@ -424,14 +570,8 @@ def main() -> None:  # noqa: C901
     )
     try:
         run_command()
-    except BlackBoxHTTPError as err:
-        log_http_error(err)
-    except BlackBoxUrlError as err:
-        logging.error(f'Invalid BlackBox url or server connection failed: {err}')
-    except BlackBoxError as err:
-        logging.error(f'BlackBox error: {err}')
+    except ScanFailedError:
+        sys.exit(ERROR_EXIT_CODE)
     except ScoreFailError:
         sys.exit(SCORE_FAIL_EXIT_CODE)
-    else:
-        sys.exit(SUCCESS_EXIT_CODE)
-    sys.exit(ERROR_EXIT_CODE)
+    sys.exit(SUCCESS_EXIT_CODE)

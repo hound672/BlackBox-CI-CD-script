@@ -1,5 +1,5 @@
 import re
-import typing
+from typing import Optional
 
 from blackbox_ci.consts import DEFAULT_SCHEME, STANDARD_PORT_SCHEMES
 from blackbox_ci.errors import UrlParseError
@@ -67,9 +67,7 @@ def normalize_url(url: str, drop_fragment: bool = False) -> str:
     return unparse_url(parse_url(url, drop_fragment))
 
 
-def _normalize_scheme(
-    scheme: typing.Optional[str], port: typing.Optional[int]
-) -> typing.Optional[str]:
+def _normalize_scheme(scheme: Optional[str], port: Optional[int]) -> Optional[str]:
     if scheme is None:
         if port is None:
             return DEFAULT_SCHEME
@@ -84,7 +82,7 @@ def _normalize_hostname(hostname: str) -> str:
     return hostname.lower()
 
 
-def _normalize_port(scheme: str, port: typing.Optional[int]) -> typing.Optional[int]:
+def _normalize_port(scheme: str, port: Optional[int]) -> Optional[int]:
     if scheme == 'http':
         if port == 80:
             return None
@@ -94,17 +92,15 @@ def _normalize_port(scheme: str, port: typing.Optional[int]) -> typing.Optional[
     return port
 
 
-def _normalize_path(path: typing.Optional[str]) -> str:
+def _normalize_path(path: Optional[str]) -> str:
     return path or '/'
 
 
-def _normalize_query(query: typing.Optional[str]) -> typing.Optional[str]:
+def _normalize_query(query: Optional[str]) -> Optional[str]:
     return query or None
 
 
-def _normalize_fragment(
-    fragment: typing.Optional[str], drop_fragment: bool
-) -> typing.Optional[str]:
+def _normalize_fragment(fragment: Optional[str], drop_fragment: bool) -> Optional[str]:
     if drop_fragment:
         return None
     return fragment or None

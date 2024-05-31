@@ -1,5 +1,5 @@
-import typing
 import urllib.parse
+from typing import Any, List, Optional, cast
 
 import requests
 from requests.adapters import HTTPAdapter
@@ -13,6 +13,7 @@ from blackbox_ci.errors import (
     BlackBoxSSLError,
 )
 from blackbox_ci.types import (
+    Authentication,
     ReportHTMLTemplate,
     ReportLocale,
     Scan,
@@ -26,7 +27,7 @@ from blackbox_ci.types import (
 
 class BlackBoxAPI:
     def __init__(
-        self, base_url: str, api_token: str, ignore_ssl: bool, adapter: HTTPAdapter
+        self, *, base_url: str, api_token: str, ignore_ssl: bool, adapter: HTTPAdapter
     ) -> None:
         self._sess = requests.session()
         self._sess.mount('http://', adapter)
@@ -41,22 +42,27 @@ class BlackBoxAPI:
         ]
         self._sess.headers['Authorization'] = f'Basic {api_token}'
 
-    def get_user_groups(self) -> typing.List[UserGroupInfo]:
+    def get_groups(self) -> List[UserGroupInfo]:
         groups_url = urllib.parse.urljoin(self._api_service_url, 'groups')
         resp = self._get(groups_url)
-        return typing.cast(typing.List[UserGroupInfo], resp.json()['data'])
+        return cast(List[UserGroupInfo], resp.json()['data'])
 
-    def get_sites(self) -> typing.List[Site]:
+    def get_group(self, *, group_uuid: str) -> UserGroupInfo:
+        group_url = urllib.parse.urljoin(self._api_service_url, f'groups/{group_uuid}')
+        resp = self._get(group_url)
+        return cast(UserGroupInfo, resp.json()['data'])
+
+    def get_sites(self) -> List[Site]:
         sites_url = urllib.parse.urljoin(self._api_service_url, 'sites')
         resp = self._get(sites_url)
-        return typing.cast(typing.List[Site], resp.json()['data'])
+        return cast(List[Site], resp.json()['data'])
 
-    def get_site(self, site_uuid: str) -> Site:
+    def get_site(self, *, site_uuid: str) -> Site:
         sites_url = urllib.parse.urljoin(self._api_service_url, f'sites/{site_uuid}')
         resp = self._get(sites_url)
-        return typing.cast(Site, resp.json()['data'])
+        return cast(Site, resp.json()['data'])
 
-    def add_site(self, target_url: str, group_uuid: str) -> str:
+    def add_site(self, *, target_url: str, group_uuid: str) -> str:
         sites_url = urllib.parse.urljoin(self._api_service_url, 'sites/add')
         sites_req = {'url': target_url, 'groupUUID': group_uuid}
         resp = self._post(sites_url, json=sites_req)
@@ -65,10 +71,11 @@ class BlackBoxAPI:
 
     def set_site_settings(
         self,
+        *,
         site_uuid: str,
         profile_uuid: str,
-        authentication_uuid: typing.Optional[str],
-        api_profile_uuid: typing.Optional[str],
+        authentication_uuid: Optional[str],
+        api_profile_uuid: Optional[str],
     ) -> None:
         sites_url = urllib.parse.urljoin(
             self._api_service_url, f'sites/{site_uuid}/settings'
@@ -80,15 +87,15 @@ class BlackBoxAPI:
         }
         self._post(sites_url, json=sites_req)
 
-    def get_site_settings(self, site_uuid: str) -> SiteSettings:
+    def get_site_settings(self, *, site_uuid: str) -> SiteSettings:
         sites_url = urllib.parse.urljoin(
             self._api_service_url, f'sites/{site_uuid}/settings'
         )
         resp = self._get(sites_url)
         settings = resp.json()['data']
-        return typing.cast(SiteSettings, settings)
+        return cast(SiteSettings, settings)
 
-    def start_scan(self, site_uuid: str) -> int:
+    def start_scan(self, *, site_uuid: str) -> int:
         sites_url = urllib.parse.urljoin(
             self._api_service_url, f'sites/{site_uuid}/start'
         )
@@ -96,22 +103,23 @@ class BlackBoxAPI:
         scan_id = resp.json()['data']['id']
         return int(scan_id)
 
-    def stop_scan(self, site_uuid: str) -> None:
+    def stop_scan(self, *, site_uuid: str) -> None:
         sites_url = urllib.parse.urljoin(
             self._api_service_url, f'sites/{site_uuid}/stop'
         )
         self._post(sites_url)
 
-    def get_scan(self, site_uuid: str, scan_id: int) -> Scan:
+    def get_scan(self, *, site_uuid: str, scan_id: int) -> Scan:
         scan_url = urllib.parse.urljoin(
             self._api_service_url, f'sites/{site_uuid}/scans/{scan_id}'
         )
         resp = self._get(scan_url)
         scan = resp.json()['data']
-        return typing.cast(Scan, scan)
+        return cast(Scan, scan)
 
     def get_vuln_group_page(
         self,
+        *,
         site_uuid: str,
         scan_id: int,
         issue_type: str,
@@ -127,33 +135,53 @@ class BlackBoxAPI:
             f'?limit={limit}&page={page}',
         )
         resp = self._get(vuln_group_url)
-        return typing.cast(VulnPage, resp.json()['data'])
+        return cast(VulnPage, resp.json()['data'])
 
-    def get_vuln_groups(self, site_uuid: str, scan_id: int) -> typing.List[VulnGroup]:
+    def get_vuln_groups(self, *, site_uuid: str, scan_id: int) -> List[VulnGroup]:
         vulns_url = urllib.parse.urljoin(
             self._api_service_url, f'sites/{site_uuid}/scans/{scan_id}/vulnerabilities'
         )
         resp = self._get(vulns_url)
-        return typing.cast(typing.List[VulnGroup], resp.json()['data'])
+        return cast(List[VulnGroup], resp.json()['data'])
 
-    def get_score(self, site_uuid: str, scan_id: int) -> typing.Optional[float]:
+    def get_score(self, *, site_uuid: str, scan_id: int) -> Optional[float]:
         score_url = urllib.parse.urljoin(
             self._api_service_url, f'sites/{site_uuid}/scans/{scan_id}'
         )
         resp = self._get(score_url)
         score = resp.json()['data']['score']
-        return typing.cast(typing.Optional[float], score)
+        return cast(Optional[float], score)
 
-    def create_shared_link(self, site_uuid: str, scan_id: int) -> str:
+    def create_shared_link(self, *, site_uuid: str, scan_id: int) -> str:
         url = urllib.parse.urljoin(
             self._api_service_url, f'sites/{site_uuid}/scans/{scan_id}/shared'
         )
         resp = self._post(url)
         uuid = resp.json()['data']['uuid']
-        return typing.cast(str, uuid)
+        return cast(str, uuid)
+
+    def create_auth_profile(
+        self,
+        *,
+        auth_type: str,
+        auth_field: str,
+        authentication: Authentication,
+        group_uuid: str,
+        name: str,
+    ) -> str:
+        url = urllib.parse.urljoin(self._api_service_url, 'authprofiles')
+        authprofiles_req = {
+            'name': name,
+            'type': auth_type,
+            auth_field: authentication,
+            'groupUUID': group_uuid,
+        }
+        resp = self._post(url, json=authprofiles_req)
+        uuid = resp.json()['data']['uuid']
+        return cast(str, uuid)
 
     def get_sarif_report_content(
-        self, site_uuid: str, scan_id: int, locale: ReportLocale
+        self, *, site_uuid: str, scan_id: int, locale: ReportLocale
     ) -> bytes:
         url = urllib.parse.urljoin(
             self._reports_service_url, f'sarif/{site_uuid}/{scan_id}'
@@ -167,6 +195,7 @@ class BlackBoxAPI:
 
     def get_html_report_content(
         self,
+        *,
         site_uuid: str,
         scan_id: int,
         locale: ReportLocale,
@@ -187,7 +216,7 @@ class BlackBoxAPI:
         self,
         method: str,
         url: str,
-        **kwargs: typing.Any,
+        **kwargs: Any,
     ) -> requests.Response:
         if method not in ('GET', 'POST'):
             raise RuntimeError(f'Method {method} not allowed')
@@ -201,30 +230,26 @@ class BlackBoxAPI:
         else:
             return resp
 
-    def _get(self, url: str, **kwargs: typing.Any) -> requests.Response:
+    def _get(self, url: str, **kwargs: Any) -> requests.Response:
         kwargs.setdefault('allow_redirects', True)
         return self._request('GET', url=url, **kwargs)
 
     def _post(
         self,
         url: str,
-        **kwargs: typing.Any,
+        **kwargs: Any,
     ) -> requests.Response:
         return self._request('POST', url=url, **kwargs)
 
     @staticmethod
-    def _raise_for_status(
-        resp: requests.Response, *args: typing.Any, **kwargs: typing.Any
-    ) -> None:
+    def _raise_for_status(resp: requests.Response, *args: Any, **kwargs: Any) -> None:
         try:
             resp.raise_for_status()
         except requests.HTTPError as er:
             raise BlackBoxHTTPError(er, request=er.request, response=er.response)
 
     @staticmethod
-    def _ensure_json(
-        resp: requests.Response, *args: typing.Any, **kwargs: typing.Any
-    ) -> None:
+    def _ensure_json(resp: requests.Response, *args: Any, **kwargs: Any) -> None:
         if resp.headers.get('content-type') != 'application/json':
             raise BlackBoxError(
                 'unexpected API response content type, '

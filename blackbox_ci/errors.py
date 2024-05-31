@@ -9,7 +9,11 @@ class BlackBoxRequestError(BlackBoxError):
     pass
 
 
-class BlackBoxUrlError(BlackBoxRequestError):
+class BlackBoxInitError(BlackBoxError):
+    pass
+
+
+class BlackBoxUrlError(BlackBoxRequestError, BlackBoxInitError):
     pass
 
 
@@ -41,6 +45,10 @@ class ScanResultError(Exception):
 
 
 class ScoreFailError(ScanResultError):
+    pass
+
+
+class ScanFailedError(ScanResultError):
     pass
 
 
