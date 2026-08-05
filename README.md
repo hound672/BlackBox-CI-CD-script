@@ -1,18 +1,12 @@
 # blackbox-scan
 
-This tool is a command-line client for the [BlackBox](https://bbs.ptsecurity.com/) API, that can help to integrate Dynamic Application Security Testing (DAST) into a CI/CD pipeline.
+This tool is a command-line client for the [BlackBox](https://bbs.ptcloud.ru/) API, that can help to integrate Dynamic Application Security Testing (DAST) into a CI/CD pipeline.
 
 ## Requirements
 
-[Python](https://www.python.org/) version 3.8.19 or above is required to run the tool. The use of [virtualenv](https://docs.python.org/3/library/venv.html) or [poetry](https://python-poetry.org/docs/) is recommended.
+[Python](https://www.python.org/) version 3.11 or above is required to run the tool. The use of [poetry](https://python-poetry.org/docs/) is recommended.
 
 To install required Python packages, run:
-
-```shell
-pip install -r requirements.txt
-```
-
-Or:
 
 ```shell
 poetry install
@@ -205,7 +199,7 @@ It is recommended that you use these environment variables instead of the corres
 ## Example
 
 ```shell
-export BLACKBOX_URL=https://bbs.ptsecurity.com/
+export BLACKBOX_URL=https://bbs.ptcloud.ru/
 export BLACKBOX_API_TOKEN=D4OPXw7mXCWjHER0lE48PCr4UkcfD86AwOwnio9I1w3HsOSS3Hxo9xi82hoWOB5deVYMk3kedgh0f9yq
 export TARGET_URL=http://staging.example.com/
 export GROUP_UUID=ee2e5f90-c9ee-454e-a4db-123463d29851
@@ -223,10 +217,10 @@ Example output for `--target-url` option (reformatted for readability):
 {
     "target_url": "http://staging.example.com/",
     "target_uuid": "ccb7de77-ff51-464d-bf25-7ebcfe0403d6",
-    "url": "https://bbs.ptsecurity.com/sites/ccb7de77-ff51-464d-bf25-7ebcfe0403d6/scans/d1b06ccb-3d56-46e6-9826-b53df8e0ff9f",
+    "url": "https://bbs.ptcloud.ru/sites/ccb7de77-ff51-464d-bf25-7ebcfe0403d6/scans/d1b06ccb-3d56-46e6-9826-b53df8e0ff9f",
     "scan_status": "FINISHED",
     "score": 1,
-    "sharedLink": "https://bbs.ptsecurity.com/shared/dee4Lyx",
+    "sharedLink": "https://bbs.ptcloud.ru/shared/dee4Lyx",
     "report_path": "/path/to/report/dir/20230825_182339_staging_example_com.ru.html",
     "vulns": {
         "issue_groups": [
@@ -312,7 +306,7 @@ Example output for `--target-file` option (with `--no-wait` option provided and 
     {
         "target_url": "http://first.example.com/",
         "target_uuid": "ccb7de77-ff51-464d-bf25-7ebcfe0403d6",
-        "url": "https://bbs.ptsecurity.com/sites/ccb7de77-ff51-464d-bf25-7ebcfe0403d6/scans/d1b06ccb-3d56-46e6-9826-b53df8e0ff9f",
+        "url": "https://bbs.ptcloud.ru/sites/ccb7de77-ff51-464d-bf25-7ebcfe0403d6/scans/d1b06ccb-3d56-46e6-9826-b53df8e0ff9f",
         "scan_status": "IN_PROGRESS",
         "score": null,
         "sharedLink": null,
@@ -323,7 +317,7 @@ Example output for `--target-file` option (with `--no-wait` option provided and 
     {
         "target_url": "http://second.example.com/",
         "target_uuid": "cce4cf46-1edf-443c-ae57-5b2abc8703bd",
-        "url": "https://bbs.ptsecurity.com/sites/d04df6be-6aa2-47a5-bb06-cabada4e41d3/scans/50d5cc1f-1dbc-4768-bb23-5dc303f00e87",
+        "url": "https://bbs.ptcloud.ru/sites/d04df6be-6aa2-47a5-bb06-cabada4e41d3/scans/50d5cc1f-1dbc-4768-bb23-5dc303f00e87",
         "scan_status": "IN_PROGRESS",
         "score": null,
         "sharedLink": null,
@@ -334,7 +328,7 @@ Example output for `--target-file` option (with `--no-wait` option provided and 
     {
         "target_url": "http://third.example.com/",
         "target_uuid": "cbb3971e-3a22-40b9-8d43-aceca9bc4b19",
-        "url": "https://bbs.ptsecurity.com/sites/39598b70-c704-4882-918d-c59f09e8bd7e/scans/d8dd5e74-8313-4e24-86bf-31a4fdd03c51",
+        "url": "https://bbs.ptcloud.ru/sites/39598b70-c704-4882-918d-c59f09e8bd7e/scans/d8dd5e74-8313-4e24-86bf-31a4fdd03c51",
         "scan_status": "IN_PROGRESS",
         "score": null,
         "sharedLink": null,
@@ -348,7 +342,7 @@ Example output for `--target-file` option (with `--no-wait` option provided and 
 In case an error occurs, the tool returns non-zero exit code and prints error log messages to `stderr`:
 
 ```
-2021-12-03 13:24:52,517 ERROR [root] BlackBox error: the scan did not succeed, see UI for the error reason: http://bbs.ptsecurity.com/sites/ccb7de77-ff51-464d-bf25-7ebcfe0403d6/scans/d1b06ccb-3d56-46e6-9826-b53df8e0ff9f
+2021-12-03 13:24:52,517 ERROR [root] BlackBox error: the scan did not succeed, see UI for the error reason: http://bbs.ptcloud.ru/sites/ccb7de77-ff51-464d-bf25-7ebcfe0403d6/scans/d1b06ccb-3d56-46e6-9826-b53df8e0ff9f
 ```
 
 ## Bugs and Issues
@@ -357,7 +351,7 @@ To report a problem related to the tool, please create a new issue.
 
 ## Terms
 
-For BlackBox terms of use, see [BlackBox License](https://bbs.ptsecurity.com/license).
+For BlackBox terms of use, see [BlackBox License](https://bbs.ptcloud.ru/license).
 
 ## License
 

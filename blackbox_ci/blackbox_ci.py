@@ -2,12 +2,10 @@ import json
 import logging
 import sys
 import time
-import warnings
-from typing import Any, Callable, Dict, List, Optional, TextIO
+from collections.abc import Callable
+from typing import Any, TextIO
 
 import click
-import urllib3.exceptions
-from requests.adapters import HTTPAdapter, Retry
 
 from blackbox_ci.blackbox_api import BlackBoxAPI
 from blackbox_ci.blackbox_operator import BlackBoxOperator
@@ -44,9 +42,7 @@ from blackbox_ci.consts import (
     SCAN_UUID_OPTION,
     SCAN_UUID_OPTION_ALIAS,
     SCORE_FAIL_EXIT_CODE,
-    SERVER_RETRY_BACKOFF_FACTOR,
     SERVER_RETRY_MAX_ATTEMPTS,
-    SERVER_RETRY_STATUSES,
     SHARED_LINK_OPTION,
     SUCCESS_EXIT_CODE,
     TARGET_FILE_ENV,
@@ -81,22 +77,20 @@ from blackbox_ci.types import (
 def collect_scan_report(
     *,
     operator: BlackBoxOperator,
-    target_url: Optional[str],
-    target_uuid: Optional[str],
+    target_url: str | None,
+    target_uuid: str | None,
     auto_create: bool,
     shared_link: bool,
-    group_uuid: Optional[str],
-    report_dir: Optional[str],
+    group_uuid: str | None,
+    report_dir: str | None,
     report_template: ReportTemplateShortname,
     report_locale: ReportLocale,
-    scan_uuid: Optional[str],
+    scan_uuid: str | None,
     **_: Any,
 ) -> ScanReport:
-    operator.set_target(
-        url=target_url, uuid=target_uuid, group_uuid=group_uuid, auto_create=auto_create
-    )
+    operator.set_target(url=target_url, uuid=target_uuid, group_uuid=group_uuid, auto_create=auto_create)
     operator.set_scan(scan_uuid=scan_uuid)
-    report_path: Optional[str] = (
+    report_path: str | None = (
         operator.generate_report_file(
             locale=report_locale,
             template_shortname=report_template,
@@ -117,32 +111,28 @@ def collect_scan_report(
 def run_target_scan(
     *,
     operator: BlackBoxOperator,
-    target_url: Optional[str],
-    target_uuid: Optional[str],
+    target_url: str | None,
+    target_uuid: str | None,
     auto_create: bool,
     previous: str,
     skip_wait_step: bool,
     shared_link: bool,
-    scan_profile_uuid: Optional[str],
-    auth_profile_uuid: Optional[str],
-    api_profile_uuid: Optional[str],
-    group_uuid: Optional[str],
-    report_dir: Optional[str],
+    scan_profile_uuid: str | None,
+    auth_profile_uuid: str | None,
+    api_profile_uuid: str | None,
+    group_uuid: str | None,
+    report_dir: str | None,
     report_template: ReportTemplateShortname,
     report_locale: ReportLocale,
-    auth_data: Dict[str, str],
+    auth_data: dict[str, str],
     **_: Any,
 ) -> ScanReport:
-    operator.set_target(
-        url=target_url, uuid=target_uuid, group_uuid=group_uuid, auto_create=auto_create
-    )
+    operator.set_target(url=target_url, uuid=target_uuid, group_uuid=group_uuid, auto_create=auto_create)
 
     operator.ensure_target_is_idle(previous=previous)
     if auth_data:
         # for multiple targets from the same group create auth profile only once
-        auth_profile_uuid = auth_data.get('uuid') or operator.create_auth_profile(
-            auth_data=auth_data
-        )
+        auth_profile_uuid = auth_data.get('uuid') or operator.create_auth_profile(auth_data=auth_data)
         auth_data['uuid'] = auth_profile_uuid
 
     if any((scan_profile_uuid, auth_profile_uuid, api_profile_uuid)):
@@ -153,7 +143,7 @@ def run_target_scan(
         )
 
     operator.start_scan()
-    report_path: Optional[str] = None
+    report_path: str | None = None
     if not skip_wait_step:
         operator.wait_for_scan()
         if report_dir is not None:
@@ -163,7 +153,9 @@ def run_target_scan(
                 output_dir=report_dir,
             )
     report: ScanReport = operator.get_scan_report(
-        target_url=target_url, shared_link=shared_link, report_path=report_path
+        target_url=target_url,
+        shared_link=shared_link,
+        report_path=report_path,
     )
     return report
 
@@ -171,8 +163,8 @@ def run_target_scan(
 def handle_scan_target(
     *,
     handler: Callable[..., ScanReport],
-    target_url: Optional[str],
-    target_uuid: Optional[str],
+    target_url: str | None,
+    target_uuid: str | None,
     blackbox_url: str,
     blackbox_api_token: str,
     ignore_ssl: bool,
@@ -180,18 +172,11 @@ def handle_scan_target(
     **kwargs: Any,
 ) -> ScanReport:
     try:
-        retry = Retry(
-            total=SERVER_RETRY_MAX_ATTEMPTS,
-            status_forcelist=SERVER_RETRY_STATUSES,
-            backoff_factor=SERVER_RETRY_BACKOFF_FACTOR,
-            raise_on_status=False,
-        )
-        adapter = HTTPAdapter(max_retries=retry)
         api = BlackBoxAPI(
             base_url=blackbox_url,
             api_token=blackbox_api_token,
             ignore_ssl=ignore_ssl,
-            adapter=adapter,
+            retries=SERVER_RETRY_MAX_ATTEMPTS,
         )
         operator = BlackBoxOperator(url=blackbox_url, api=api)
     except BlackBoxInitError as err:
@@ -220,34 +205,31 @@ def handle_scan_target(
         )
 
 
-def check_errors(failed_targets: List[str]) -> None:
+def check_errors(failed_targets: list[str]) -> None:
     if failed_targets:
         failed_targets_message = '"\n"'.join(failed_targets)
-        logging.error(
-            f'errors occurred for targets:\n"{failed_targets_message}"\n'
-            f'See error log above'
-        )
-        raise ScanFailedError()
+        logging.error(f'errors occurred for targets:\n"{failed_targets_message}"\nSee error log above')
+        raise ScanFailedError
 
 
 def check_reports(
-    reports: List[ScanReport],
-    fail_under_score: Optional[float],
+    reports: list[ScanReport],
+    fail_under_score: float | None,
 ) -> None:
     if fail_under_score is not None:
         for report in reports:
             if report['score'] is not None and report['score'] < fail_under_score:
-                raise ScoreFailError()
+                raise ScoreFailError
 
 
-def log_current_target(target_list: List[str], target: str) -> None:
+def log_current_target(target_list: list[str], target: str) -> None:
     count = target_list.count(target)
     if count > 1:
         logging.warning(f'Target {target} is repeated in list {count} times')
     logging.info(f'Starting scan for target `{target}`')
 
 
-def log_report_errors(errors: List[ErrorReport]) -> None:
+def log_report_errors(errors: list[ErrorReport]) -> None:
     for err in errors:
         short_info = err['short_info']
         message = err['message']
@@ -260,15 +242,13 @@ def log_report_errors(errors: List[ErrorReport]) -> None:
 
 def process_target_list(
     *,
-    target_list: List[str],
-    fail_under_score: Optional[float],
-    auth_data: Optional[TextIO],
+    target_list: list[str],
+    fail_under_score: float | None,
+    auth_data: TextIO | None,
     **kwargs: Any,
 ) -> None:
     common_auth_profile_data = (
-        read_key_value_pairs(auth_data, on_env_updater=update_auth_data_on_env)
-        if auth_data
-        else None
+        read_key_value_pairs(auth_data, on_env_updater=update_auth_data_on_env) if auth_data else None
     )
     reports = []
     failed_targets = []
@@ -296,15 +276,11 @@ def process_target_list(
 
 def process_single_target(
     *,
-    fail_under_score: Optional[float],
-    auth_data: Optional[TextIO],
+    fail_under_score: float | None,
+    auth_data: TextIO | None,
     **kwargs: Any,
 ) -> None:
-    auth_profile_data = (
-        read_key_value_pairs(auth_data, on_env_updater=update_auth_data_on_env)
-        if auth_data
-        else None
-    )
+    auth_profile_data = read_key_value_pairs(auth_data, on_env_updater=update_auth_data_on_env) if auth_data else None
     report = handle_scan_target(auth_data=auth_profile_data, **kwargs)
     errors = report['errors']
     if errors:
@@ -313,41 +289,32 @@ def process_single_target(
     print(json.dumps(report))
 
     if errors:
-        raise ScanFailedError()
-    elif (
-        report['score'] is not None
-        and fail_under_score is not None
-        and report['score'] < fail_under_score
-    ):
-        raise ScoreFailError()
+        raise ScanFailedError
+    if report['score'] is not None and fail_under_score is not None and report['score'] < fail_under_score:
+        raise ScoreFailError
 
 
 @click.command()
-@click.option(
-    BLACKBOX_URL_OPTION, envvar=BLACKBOX_URL_ENV, default='https://bbs.ptsecurity.com/'
-)
+@click.option(BLACKBOX_URL_OPTION, envvar=BLACKBOX_URL_ENV, default='https://bbs.ptcloud.ru/')
 @click.option(BLACKBOX_API_TOKEN_OPTION, envvar=BLACKBOX_API_TOKEN_ENV, required=True)
 @click.option(
     TARGET_URL_OPTION,
     envvar=TARGET_URL_ENV,
     default=None,
-    help=f'Set url of scan target. '
-    f'Do not use with {TARGET_FILE_OPTION}, {TARGET_UUID_OPTION}.',
+    help=f'Set url of scan target. Do not use with {TARGET_FILE_OPTION}, {TARGET_UUID_OPTION}.',
 )
 @click.option(
     TARGET_FILE_OPTION,
     envvar=TARGET_FILE_ENV,
     type=click.File('r'),
     default=None,
-    help=f'Set filename with target urls. '
-    f'Do not use with {TARGET_URL_OPTION}, {TARGET_UUID_OPTION}.',
+    help=f'Set filename with target urls. Do not use with {TARGET_URL_OPTION}, {TARGET_UUID_OPTION}.',
 )
 @click.option(
     TARGET_UUID_OPTION,
     envvar=TARGET_UUID_ENV,
     default=None,
-    help=f'Set uuid of scan target. '
-    f'Do not use with {TARGET_URL_OPTION}, {TARGET_FILE_OPTION}.',
+    help=f'Set uuid of scan target. Do not use with {TARGET_URL_OPTION}, {TARGET_FILE_OPTION}.',
 )
 @click.option(
     GROUP_UUID_OPTION,
@@ -365,8 +332,7 @@ def process_single_target(
 @click.option(
     AUTO_CREATE_OPTION,
     is_flag=True,
-    help='Automatically create a site if a site with the target URL '
-    'in the specified group was not found.',
+    help='Automatically create a site if a site with the target URL in the specified group was not found.',
 )
 @click.option(
     PREVIOUS_OPTION,
@@ -410,14 +376,11 @@ def process_single_target(
     FAIL_UNDER_SCORE_OPTION,
     type=click.FloatRange(1, 10),
     default=None,
-    help='Fail with exit code 3 if report scoring is less '
-    'than given score (set "1" or do not set to never fail).',
+    help='Fail with exit code 3 if report scoring is less than given score (set "1" or do not set to never fail).',
 )
 @click.option(
     REPORT_DIR_OPTION,
-    type=click.Path(
-        exists=True, resolve_path=True, file_okay=False, dir_okay=True, writable=True
-    ),
+    type=click.Path(exists=True, resolve_path=True, file_okay=False, dir_okay=True, writable=True),
     default=None,
     help='Set directory path for storing the generated report file. '
     'If the option is used, the report will be saved in the specified directory. '
@@ -449,8 +412,7 @@ def process_single_target(
     SCAN_UUID_OPTION,
     SCAN_UUID_OPTION_ALIAS,
     default=None,
-    help='Set the scan UUID to get the results. '
-    f'Can be used without {RESULTS_ONLY_OPTION} option.',
+    help=f'Set the scan UUID to get the results. Can be used without {RESULTS_ONLY_OPTION} option.',
 )
 @click.option(
     AUTH_DATA_OPTION,
@@ -467,25 +429,25 @@ def process_single_target(
 def run_command(
     blackbox_url: str,
     blackbox_api_token: str,
-    target_url: Optional[str],
-    target_file: Optional[TextIO],
-    target_uuid: Optional[str],
+    target_url: str | None,
+    target_file: TextIO | None,
+    target_uuid: str | None,
     ignore_ssl: bool,
     auto_create: bool,
     previous: str,
     no_wait: bool,
     shared_link: bool,
-    scan_profile_uuid: Optional[str],
-    auth_profile_uuid: Optional[str],
-    api_profile_uuid: Optional[str],
-    fail_under_score: Optional[float],
-    group_uuid: Optional[str],
-    report_dir: Optional[str],
+    scan_profile_uuid: str | None,
+    auth_profile_uuid: str | None,
+    api_profile_uuid: str | None,
+    fail_under_score: float | None,
+    group_uuid: str | None,
+    report_dir: str | None,
     report_template: ReportTemplateShortname,
     report_locale: ReportLocale,
     results_only: bool,
-    scan_uuid: Optional[str],
-    auth_data: Optional[TextIO],
+    scan_uuid: str | None,
+    auth_data: TextIO | None,
 ) -> None:
     check_target_source(
         target_url=target_url,
@@ -506,14 +468,7 @@ def run_command(
         results_only=results_only,
     )
 
-    if ignore_ssl:
-        warnings.simplefilter('ignore', urllib3.exceptions.InsecureRequestWarning)
-
-    handler: Callable[..., ScanReport]
-    if results_only or scan_uuid:
-        handler = collect_scan_report
-    else:
-        handler = run_target_scan
+    handler: Callable[..., ScanReport] = collect_scan_report if results_only or scan_uuid else run_target_scan
 
     if target_file:
         target_list = target_file.read().splitlines()
@@ -565,10 +520,8 @@ def run_command(
         )
 
 
-def main() -> None:  # noqa: C901
-    logging.basicConfig(
-        level=logging.DEBUG, format='%(asctime)s %(levelname)s [%(name)s] %(message)s'
-    )
+def main() -> None:
+    logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(levelname)s [%(name)s] %(message)s')
     try:
         run_command()
     except ScanFailedError:

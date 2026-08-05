@@ -1,0 +1,124 @@
+# https://beta.ruff.rs/docs/settings/
+line-length = 120
+
+target-version = "py311"
+
+extend-exclude = ["blackbox_ci/generated"]
+
+[format]
+quote-style = "single"
+
+[lint]
+dummy-variable-rgx = "^_$"
+ignore = [
+    "A003",
+    "ANN002",
+    "ANN003",
+    "ANN101",
+    "ANN102",
+    "ANN401",
+    "B007",
+    "B008",
+    "BLE001",
+    "DTZ003",
+    "DTZ004",
+    "DTZ007",
+    "EM101",
+    "EM102",
+    "FIX001",
+    "N805",
+    "PLR0913",
+    "PLW2901",
+    "PTH",
+    "PYI024",
+    "RUF002",
+    "RUF003",
+    "RUF012",
+    "S103",
+    "S105",
+    "S603",
+    "S607",
+    "TD005",
+    "TRY003",
+]
+# Сортировка правил как на сайте: https://beta.ruff.rs/docs/rules/
+select = [
+    "F",
+    "E",
+    "W",
+    "C90",
+    "I",
+    "N",
+    "UP",
+    "ANN",
+    "ASYNC",
+    "S",
+    "BLE",
+    "B",
+    "A",
+    "COM",
+    "C4",
+    "DTZ",
+    "T10",
+    "EM",
+    "EXE",
+    "ISC",
+    "ICN",
+    "INP",
+    "PIE",
+    "T20",
+    "PYI",
+    "PT",
+    "Q",
+    "RSE",
+    "RET",
+    "SLF",
+    "SLOT",
+    "SIM",
+    "TID",
+    "INT",
+    "ARG",
+    "PTH",
+    "TD005",
+    "TD007",
+    "FIX001",
+    "ERA",
+    "PGH",
+    "PL",
+    "TRY",
+    "FLY",
+    "PERF",
+    "RUF",
+]
+
+[lint.per-file-ignores]
+# CLI module emits JSON to stdout as its public contract.
+"blackbox_ci/blackbox_ci.py" = ["T201"]
+# Tests rely on assert, magic values, and reaching into private internals; strict
+# annotations and bandit's auth-string heuristics don't apply.
+"tests/*" = [
+    "ANN",
+    "PLR2004",
+    "S101",
+    "S105",
+    "S106",
+    "S108",
+    "SLF001",
+]
+
+[lint.flake8-annotations]
+mypy-init-return = true
+suppress-none-returning = true
+
+[lint.flake8-unused-arguments]
+ignore-variadic-names = true
+
+[lint.flake8-quotes]
+inline-quotes = "single"
+
+[lint.isort]
+combine-as-imports = true
+
+[lint.pylint]
+max-args = 10
+max-returns = 8

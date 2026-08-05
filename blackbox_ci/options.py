@@ -1,6 +1,6 @@
 from enum import Enum, EnumMeta
 from os import getenv
-from typing import Any, Dict, List, Optional, TextIO, cast
+from typing import Any, TextIO, cast
 
 import click
 
@@ -22,64 +22,55 @@ from blackbox_ci.consts import (
 )
 
 
-class EnumChoice(click.Choice):
-    def __init__(
-        self, enum: EnumMeta, case_sensitive: bool = False, use_value: bool = False
-    ):
+class EnumChoice(click.Choice[Any]):
+    def __init__(self, enum: EnumMeta, case_sensitive: bool = False, use_value: bool = False):
         self.enum = enum
         self.use_value = use_value
-        choices: List[str] = [
-            str(e.value) if use_value else e.name for e in cast(List[Enum], self.enum)
-        ]
+        choices: list[str] = [str(e.value) if use_value else e.name for e in cast(list[Enum], self.enum)]
         super().__init__(choices=choices, case_sensitive=case_sensitive)
 
     def convert(
         self,
         value: Any,
-        param: Optional['click.Parameter'],
-        ctx: Optional['click.Context'],
+        param: click.Parameter | None,
+        ctx: click.Context | None,
     ) -> Enum:
         value = super().convert(value, param, ctx)
         if self.use_value:
-            return next(e for e in cast(List[Enum], self.enum) if str(e.value) == value)
+            return next(e for e in cast(list[Enum], self.enum) if str(e.value) == value)
         return self.enum[value]
 
 
 def check_target_source(
     *,
-    target_url: Optional[str],
-    target_file: Optional[TextIO],
-    target_uuid: Optional[str],
+    target_url: str | None,
+    target_file: TextIO | None,
+    target_uuid: str | None,
     auto_create: bool,
 ) -> None:
-    used_options = sum(
-        option is not None for option in (target_url, target_file, target_uuid)
-    )
+    used_options = sum(option is not None for option in (target_url, target_file, target_uuid))
     if used_options > 1:
         raise click.exceptions.UsageError(
             'Only one of '
             f'{TARGET_URL_OPTION}, {TARGET_FILE_OPTION} or {TARGET_UUID_OPTION} '
             'options allowed. '
-            'Check provided options and environment variables.'
+            'Check provided options and environment variables.',
         )
-    elif used_options < 1:
+    if used_options < 1:
         raise click.exceptions.UsageError(
-            'One of '
-            f'{TARGET_URL_OPTION}, {TARGET_FILE_OPTION} or {TARGET_UUID_OPTION} '
-            'options required.'
+            f'One of {TARGET_URL_OPTION}, {TARGET_FILE_OPTION} or {TARGET_UUID_OPTION} options required.',
         )
-    elif auto_create and target_uuid:
+    if auto_create and target_uuid:
         raise click.exceptions.UsageError(
-            f'{TARGET_UUID_OPTION} option cannot be used '
-            f'with {AUTO_CREATE_OPTION} flag.'
+            f'{TARGET_UUID_OPTION} option cannot be used with {AUTO_CREATE_OPTION} flag.',
         )
 
 
 def check_report_output_options(
     *,
-    report_dir: Optional[str],
+    report_dir: str | None,
     no_wait: bool,
-    scan_uuid: Optional[str],
+    scan_uuid: str | None,
     results_only: bool,
 ) -> None:
     if results_only or scan_uuid:
@@ -89,15 +80,15 @@ def check_report_output_options(
     if no_wait and report_dir:
         raise click.exceptions.UsageError(
             f'{REPORT_DIR_OPTION} option cannot be used with {NO_WAIT_OPTION} option. '
-            'To generate a report the scan must be finished or stopped.'
+            'To generate a report the scan must be finished or stopped.',
         )
 
 
 def check_auth_options(
     *,
-    auth_profile_uuid: Optional[str],
-    auth_data: Optional[TextIO],
-    scan_uuid: Optional[str],
+    auth_profile_uuid: str | None,
+    auth_data: TextIO | None,
+    scan_uuid: str | None,
     results_only: bool,
 ) -> None:
     if results_only or scan_uuid:
@@ -108,11 +99,11 @@ def check_auth_options(
             'Only one of '
             f'{AUTH_PROFILE_OPTION} or {AUTH_DATA_OPTION} '
             'options allowed. '
-            'Check provided options and environment variables.'
+            'Check provided options and environment variables.',
         )
 
 
-def update_auth_data_on_env(auth_data: Dict[str, str]) -> None:
+def update_auth_data_on_env(auth_data: dict[str, str]) -> None:
     password = auth_data.get(AUTH_PASSWORD_KEY, getenv(AUTH_PASSWORD_ENV))
     if password:
         auth_data[AUTH_PASSWORD_KEY] = password

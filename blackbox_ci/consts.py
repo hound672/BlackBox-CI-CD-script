@@ -1,6 +1,7 @@
-from typing import Tuple
+from enum import StrEnum
 
-from blackbox_ci.types import ReportHTMLTemplate, ReportTemplateShortname, ScanStatus
+from blackbox_ci.generated.models.scan_status import ScanStatus
+from blackbox_ci.types import ReportHTMLTemplate, ReportTemplateShortname
 
 # transport consts
 SERVER_RETRY_MAX_ATTEMPTS = 5
@@ -24,7 +25,7 @@ STANDARD_PORT_SCHEMES = {
 DEFAULT_SCHEME = 'https'
 
 # scan status consts
-IDLE_SCAN_STATUSES: Tuple[ScanStatus, ...] = (ScanStatus.stopped, ScanStatus.finished)
+IDLE_SCAN_STATUSES: tuple[ScanStatus, ...] = (ScanStatus.STOPPED, ScanStatus.FINISHED)
 
 # vulns consts
 PAGE_VULNS_LIMIT = 100
@@ -44,8 +45,8 @@ REPORT_FILENAME_DATETIME_FORMAT = '%Y%m%d_%H%M%S'
 # option consts
 BLACKBOX_URL_OPTION = '--blackbox-url'
 BLACKBOX_URL_ENV = 'BLACKBOX_URL'
-BLACKBOX_API_TOKEN_OPTION = '--blackbox-api-token'  # noqa: S105
-BLACKBOX_API_TOKEN_ENV = 'BLACKBOX_API_TOKEN'  # noqa: S105
+BLACKBOX_API_TOKEN_OPTION = '--blackbox-api-token'
+BLACKBOX_API_TOKEN_ENV = 'BLACKBOX_API_TOKEN'
 TARGET_URL_OPTION = '--target-url'
 TARGET_URL_ENV = 'TARGET_URL'
 TARGET_UUID_OPTION = '--target-uuid'
@@ -63,8 +64,8 @@ SHARED_LINK_OPTION = '--shared-link'
 SCAN_PROFILE_OPTION = '--scan-profile'
 SCAN_PROFILE_ENV = 'SCAN_PROFILE'
 AUTH_DATA_OPTION = '--auth-data'
-AUTH_PASSWORD_ENV = 'AUTH_PASSWORD'  # noqa: S105
-AUTH_TOKEN_ENV = 'AUTH_TOKEN'  # noqa: S105
+AUTH_PASSWORD_ENV = 'AUTH_PASSWORD'
+AUTH_TOKEN_ENV = 'AUTH_TOKEN'
 AUTH_API_KEY_VALUE_ENV = 'AUTH_API_KEY_VALUE'
 AUTH_PROFILE_OPTION = '--auth-profile'
 AUTH_PROFILE_ENV = 'AUTH_PROFILE'
@@ -81,12 +82,12 @@ SCAN_UUID_OPTION_ALIAS = '--scan-id'
 # auth file keys
 AUTH_TYPE_KEY = 'TYPE'
 AUTH_USERNAME_KEY = 'USERNAME'
-AUTH_PASSWORD_KEY = 'PASSWORD'  # noqa: S105
+AUTH_PASSWORD_KEY = 'PASSWORD'
 AUTH_FORM_URL_KEY = 'FORM_URL'
 AUTH_SUCCESS_STRING_KEY = 'SUCCESS_STRING'
 AUTH_FORM_X_PATH_KEY = 'FORM_X_PATH'
 AUTH_USERNAME_FIELD_KEY = 'USERNAME_FIELD'
-AUTH_PASSWORD_FIELD_KEY = 'PASSWORD_FIELD'  # noqa: S105
+AUTH_PASSWORD_FIELD_KEY = 'PASSWORD_FIELD'
 AUTH_REGEXP_OF_SUCCESS_KEY = 'REGEXP_OF_SUCCESS'
 AUTH_SUBMIT_VALUE_KEY = 'SUBMIT_VALUE'
 AUTH_COOKIES_KEY = 'COOKIES'
@@ -94,4 +95,13 @@ AUTH_SUCCESS_URL_KEY = 'SUCCESS_URL'
 AUTH_APIKEY_PLACE_KEY = 'PLACE'
 AUTH_APIKEY_NAME_KEY = 'NAME'
 AUTH_APIKEY_VALUE_KEY = 'VALUE'
-AUTH_TOKEN_KEY = 'TOKEN'  # noqa: S105
+AUTH_TOKEN_KEY = 'TOKEN'
+
+
+class AuthenticationType(StrEnum):
+    HTTP_BASIC = 'httpBasic'
+    HTML_AUTO_FORM = 'htmlAutoForm'
+    HTML_FORM_BASED = 'htmlFormBased'
+    RAW_COOKIE = 'rawCookie'
+    API_KEY = 'apiKey'
+    BEARER = 'bearer'

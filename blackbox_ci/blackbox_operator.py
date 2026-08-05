@@ -1,28 +1,14 @@
 import time
 import urllib.parse
+from collections.abc import Callable
 from functools import wraps
-from typing import Any, Callable, Dict, List, Optional, cast
+from typing import Any, cast
 
-import requests
+import httpx
 
+from blackbox_ci.auth_profiles import build_auth_profile_body
 from blackbox_ci.blackbox_api import BlackBoxAPI
 from blackbox_ci.consts import (
-    AUTH_APIKEY_NAME_KEY,
-    AUTH_APIKEY_PLACE_KEY,
-    AUTH_APIKEY_VALUE_KEY,
-    AUTH_COOKIES_KEY,
-    AUTH_FORM_URL_KEY,
-    AUTH_FORM_X_PATH_KEY,
-    AUTH_PASSWORD_FIELD_KEY,
-    AUTH_PASSWORD_KEY,
-    AUTH_REGEXP_OF_SUCCESS_KEY,
-    AUTH_SUBMIT_VALUE_KEY,
-    AUTH_SUCCESS_STRING_KEY,
-    AUTH_SUCCESS_URL_KEY,
-    AUTH_TOKEN_KEY,
-    AUTH_TYPE_KEY,
-    AUTH_USERNAME_FIELD_KEY,
-    AUTH_USERNAME_KEY,
     AUTO_CREATE_OPTION,
     HTML_TEMPLATES_MAP,
     IDLE_SCAN_STATUSES,
@@ -33,41 +19,38 @@ from blackbox_ci.consts import (
 )
 from blackbox_ci.errors import BlackBoxError, BlackBoxHTTPError, BlackBoxUrlError
 from blackbox_ci.files import save_report_content
+from blackbox_ci.generated.models.group_type import GroupType
+from blackbox_ci.generated.models.scan_status import ScanStatus
+from blackbox_ci.generated.models.severity import Severity
+from blackbox_ci.generated.models.site_schema import SiteSchema
+from blackbox_ci.generated.models.site_settings_info_schema import SiteSettingsInfoSchema
+from blackbox_ci.generated.models.vuln_cve_approved_schema import VulnCVEApprovedSchema
+from blackbox_ci.generated.models.vuln_cve_schema import VulnCVESchema
+from blackbox_ci.generated.models.vuln_error_page_schema import VulnErrorPageSchema
+from blackbox_ci.generated.models.vuln_group_schema import VulnGroupSchema
+from blackbox_ci.generated.models.vuln_trending_schema import VulnTrendingSchema
+from blackbox_ci.generated.models.vuln_we_schema import VulnWESchema
+from blackbox_ci.generated.models.vulnerability_issue import VulnerabilityIssue
 from blackbox_ci.types import (
-    ApiKey,
-    ApiKeyPlace,
-    APIProfile,
-    Authentication,
-    AuthenticationProfile,
-    AuthenticationType,
-    Bearer,
     ErrorReport,
     GroupCve,
     GroupErrorPage,
     GroupIssue,
-    HtmlAutoForm,
-    HtmlFormBased,
-    HttpBasic,
-    RawCookie,
     ReportExtension,
     ReportLocale,
     ReportScanStatus,
     ReportTemplateShortname,
     ReturnType,
-    ScanProfile,
     ScanReport,
-    ScanStatus,
-    Site,
-    SiteSettings,
     TargetVulns,
-    UserGroupType,
-    VulnCommon,
     VulnCve,
     VulnErrorPage,
-    VulnGroup,
     VulnIssue,
 )
 from blackbox_ci.urls import normalize_url
+
+IssueVuln = VulnWESchema | VulnTrendingSchema
+CveVuln = VulnCVESchema | VulnCVEApprovedSchema
 
 
 def ensure_attrs_set(
@@ -96,59 +79,54 @@ class BlackBoxOperator:
         self._api = api
         self._scan_finished: bool = False
 
-    def set_user_group(self, *, group_uuid: Optional[str]) -> None:
+    def set_user_group(self, *, group_uuid: str | None) -> None:
         user_type_groups = [
             group
             for group in self._api.get_groups()
-            if group['type'] == UserGroupType.USER
-            and (group_uuid is None or group['uuid'] == group_uuid)
+            if group.type_ == GroupType.USER and (group_uuid is None or group.uuid == group_uuid)
         ]
         if len(user_type_groups) == 1:
-            group_uuid = user_type_groups[0]['uuid']
+            group_uuid = user_type_groups[0].uuid
         elif group_uuid is None:
             raise BlackBoxError(
-                'the group UUID for site is required, '
-                'use UI to create new group or choose existing one'
+                'the group UUID for site is required, use UI to create new group or choose existing one',
             )
         else:
             raise BlackBoxError(
-                'the group with the UUID specified was not found, '
-                'use UI to create new or choose existing one'
+                'the group with the UUID specified was not found, use UI to create new or choose existing one',
             )
         self._group_uuid = group_uuid
 
     @ensure_attrs_set('_group_uuid')
-    def get_target(self, *, url: str) -> Optional[Site]:
+    def get_target(self, *, url: str) -> SiteSchema | None:
         normalized_url = normalize_url(url)
         sites = self._api.get_sites()
         for site in sites:
-            if (
-                site['url'] == normalized_url
-                and site['group']['uuid'] == self._group_uuid
-            ):
+            if site.url == normalized_url and site.group.uuid == self._group_uuid:
                 return site
         return None
 
     @ensure_attrs_set('_site_uuid')
-    def set_scan(self, *, scan_uuid: Optional[str]) -> None:
+    def set_scan(self, *, scan_uuid: str | None) -> None:
         site = self._api.get_site(site_uuid=self._site_uuid)
-        if not site['lastScan']:
+        last_scan = site.last_scan
+        if last_scan is None:
             raise BlackBoxError('this site has not yet been scanned')
 
-        if scan_uuid and scan_uuid != site['lastScan']['uuid']:
+        if scan_uuid and scan_uuid != last_scan.uuid:
             scan = self._api.get_scan(scan_uuid=scan_uuid)
             self._scan_uuid = scan_uuid
-            self._scan_finished = scan['status'] in IDLE_SCAN_STATUSES
+            self._scan_finished = scan.status in IDLE_SCAN_STATUSES
         else:
-            self._scan_uuid = site['lastScan']['uuid']
-            self._scan_finished = site['lastScan']['status'] in IDLE_SCAN_STATUSES
+            self._scan_uuid = last_scan.uuid
+            self._scan_finished = last_scan.status in IDLE_SCAN_STATUSES
 
     def set_target(
         self,
         *,
-        url: Optional[str],
-        uuid: Optional[str],
-        group_uuid: Optional[str],
+        url: str | None,
+        uuid: str | None,
+        group_uuid: str | None,
         auto_create: bool,
     ) -> None:
         if uuid:
@@ -159,15 +137,13 @@ class BlackBoxOperator:
         else:
             raise RuntimeError('uuid or url required to set target')
 
-    def set_target_by_uuid(self, *, uuid: str, group_uuid: Optional[str]) -> None:
+    def set_target_by_uuid(self, *, uuid: str, group_uuid: str | None) -> None:
         if group_uuid:
             self.set_user_group(group_uuid=group_uuid)  # ensure group exists
         sites = self._api.get_sites()
         for site in sites:
-            if site['uuid'] == uuid and (
-                not group_uuid or site['group']['uuid'] == group_uuid
-            ):
-                self._group_uuid = site['group']['uuid']
+            if str(site.uuid) == uuid and (not group_uuid or site.group.uuid == group_uuid):
+                self._group_uuid = site.group.uuid
                 self._site_uuid = uuid
                 return
 
@@ -176,42 +152,37 @@ class BlackBoxOperator:
             f'the site with the UUID specified was not found{group_verbose}, '
             'choose existing one via UI, use UI to create new one manually '
             f'or use {TARGET_URL_OPTION} option and {AUTO_CREATE_OPTION} flag '
-            f'to do so automatically'
+            f'to do so automatically',
         )
 
     @ensure_attrs_set('_group_uuid')
     def set_target_by_url(self, *, url: str, auto_create: bool) -> None:
-        site: Optional[Site] = self.get_target(url=url)
+        site = self.get_target(url=url)
         if site is None:
             if not auto_create:
                 raise BlackBoxError(
                     'the site with the URL specified was not found in the group, '
                     'use UI to create one manually, '
-                    f'or use {AUTO_CREATE_OPTION} flag to do so automatically'
+                    f'or use {AUTO_CREATE_OPTION} flag to do so automatically',
                 )
-            self._site_uuid = self._api.add_site(
-                target_url=url, group_uuid=self._group_uuid
-            )
+            self._site_uuid = self._api.add_site(target_url=url, group_uuid=self._group_uuid)
         else:
-            self._site_uuid = site['uuid']
+            self._site_uuid = str(site.uuid)
 
     @ensure_attrs_set('_site_uuid')
     def set_site_settings(
         self,
         *,
-        profile_uuid: Optional[str],
-        auth_uuid: Optional[str],
-        api_profile_uuid: Optional[str],
+        profile_uuid: str | None,
+        auth_uuid: str | None,
+        api_profile_uuid: str | None,
     ) -> None:
         current_settings = self._api.get_site_settings(site_uuid=self._site_uuid)
-        new_profile_uuid = self._get_new_profile_uuid(
-            current_settings=current_settings, profile_uuid=profile_uuid
-        )
-        new_auth_uuid = self._get_new_auth_uuid(
-            current_settings=current_settings, auth_uuid=auth_uuid
-        )
+        new_profile_uuid = self._get_new_profile_uuid(current_settings=current_settings, profile_uuid=profile_uuid)
+        new_auth_uuid = self._get_new_auth_uuid(current_settings=current_settings, auth_uuid=auth_uuid)
         new_api_profile_uuid = self._get_new_api_profile_uuid(
-            current_settings=current_settings, api_profile_uuid=api_profile_uuid
+            current_settings=current_settings,
+            api_profile_uuid=api_profile_uuid,
         )
         if self._is_settings_changed(
             current_settings=current_settings,
@@ -227,50 +198,37 @@ class BlackBoxOperator:
             )
 
     @ensure_attrs_set('_group_uuid')
-    def create_auth_profile(self, *, auth_data: Dict[str, str]) -> str:
-        _raw_auth_data = auth_data.copy()
-        auth_type = self._pop_auth_type_from_raw_data(raw_auth_data=_raw_auth_data)
-        auth_json = self._convert_auth_json(
-            raw_auth_data=_raw_auth_data, auth_type=auth_type
-        )
-        if _raw_auth_data:
-            verbose = ', '.join(_raw_auth_data.keys())
-            raise BlackBoxError(
-                f'following fields unsupported for this auth type: {verbose}'
-            )
-
+    def create_auth_profile(self, *, auth_data: dict[str, str]) -> str:
         group = self._api.get_group(group_uuid=self._group_uuid)
-        auth_profile_uuid = self._api.create_auth_profile(
-            auth_type=auth_type.name,
-            auth_field=auth_type.value,
-            authentication=auth_json,
+        body = build_auth_profile_body(
             group_uuid=self._group_uuid,
-            name=group['name'],
+            group_name=group.name,
+            auth_data=auth_data,
         )
-        return auth_profile_uuid
+        return self._api.create_auth_profile(body=body)
 
     @ensure_attrs_set('_site_uuid')
     def is_target_busy(self) -> bool:
         site = self._api.get_site(site_uuid=self._site_uuid)
-        last_scan = site['lastScan']
-        if not last_scan:
+        last_scan = site.last_scan
+        if last_scan is None:
             return False
-        return last_scan['status'] not in IDLE_SCAN_STATUSES
+        return last_scan.status not in IDLE_SCAN_STATUSES
 
     @ensure_attrs_set('_site_uuid', '_scan_uuid')
     def is_scan_busy(self) -> bool:
         scan = self._api.get_scan(scan_uuid=self._scan_uuid)
-        return scan['status'] not in IDLE_SCAN_STATUSES
+        return scan.status not in IDLE_SCAN_STATUSES
 
     @ensure_attrs_set('_site_uuid', '_scan_uuid')
     def is_scan_ok(self) -> bool:
         scan = self._api.get_scan(scan_uuid=self._scan_uuid)
-        return scan['status'] == ScanStatus.finished and scan['errorReason'] is None
+        return scan.status == ScanStatus.FINISHED and scan.error_reason is None
 
     @ensure_attrs_set('_site_uuid', '_scan_uuid')
-    def get_scan_error_reason(self) -> Optional[str]:
+    def get_scan_error_reason(self) -> str | None:
         scan = self._api.get_scan(scan_uuid=self._scan_uuid)
-        return scan['errorReason']
+        return scan.error_reason
 
     @ensure_attrs_set('_site_uuid')
     def ensure_target_is_idle(self, *, previous: str) -> None:
@@ -294,21 +252,19 @@ class BlackBoxOperator:
     def get_scan_report(
         self,
         *,
-        target_url: Optional[str],
+        target_url: str | None,
         shared_link: bool,
-        report_path: Optional[str],
+        report_path: str | None,
         partial_results: bool = False,
     ) -> ScanReport:
         site = self._api.get_site(site_uuid=self._site_uuid)
         scan = self._api.get_scan(scan_uuid=self._scan_uuid)
 
         report: ScanReport = {
-            'target_url': target_url if target_url else site['url'],
+            'target_url': target_url if target_url else site.url,
             'target_uuid': self._site_uuid,
             'url': self._scan_url,
-            'scan_status': ReportScanStatus[scan['status']]
-            if scan['status'] in IDLE_SCAN_STATUSES
-            else ReportScanStatus.in_progress,
+            'scan_status': self._report_scan_status(scan.status),
             'score': None,
             'sharedLink': None,
             'report_path': report_path,
@@ -325,18 +281,16 @@ class BlackBoxOperator:
     def get_error_report(
         self,
         *,
-        target_url: Optional[str],
-        target_uuid: Optional[str],
+        target_url: str | None,
+        target_uuid: str | None,
         shared_link: bool,
-        report_path: Optional[str],
+        report_path: str | None,
         error: BlackBoxError,
     ) -> ScanReport:
         errors = [self._convert_error_json(error=error)]
         report: ScanReport = {
             'target_url': target_url,
-            'target_uuid': self._site_uuid
-            if not target_uuid and hasattr(self, '_site_uuid')
-            else target_uuid,
+            'target_uuid': self._site_uuid if not target_uuid and hasattr(self, '_site_uuid') else target_uuid,
             'url': None,
             'scan_status': None,
             'score': None,
@@ -350,17 +304,9 @@ class BlackBoxOperator:
             report['url'] = self._scan_url
 
             try:
-                report['target_url'] = (
-                    self._api.get_site(site_uuid=self._site_uuid)['url']
-                    if not target_url
-                    else target_url
-                )
+                report['target_url'] = target_url if target_url else self._api.get_site(site_uuid=self._site_uuid).url
                 scan = self._api.get_scan(scan_uuid=self._scan_uuid)
-                report['scan_status'] = (
-                    ReportScanStatus[scan['status']]
-                    if scan['status'] in IDLE_SCAN_STATUSES
-                    else ReportScanStatus.in_progress
-                )
+                report['scan_status'] = self._report_scan_status(scan.status)
                 if shared_link:
                     report['sharedLink'] = self._create_shared_link()
                 report['score'] = self._api.get_score(scan_uuid=self._scan_uuid)
@@ -373,9 +319,9 @@ class BlackBoxOperator:
     def get_init_error_report(
         cls,
         *,
-        target_url: Optional[str],
-        target_uuid: Optional[str],
-        report_path: Optional[str],
+        target_url: str | None,
+        target_uuid: str | None,
+        report_path: str | None,
         error: BlackBoxError,
     ) -> ScanReport:
         errors = [cls._convert_error_json(error=error)]
@@ -403,7 +349,7 @@ class BlackBoxOperator:
         if not self._scan_finished:
             raise BlackBoxError('scan must be finished or stopped to generate report')
 
-        if template_shortname in HTML_TEMPLATES_MAP.keys():
+        if template_shortname in HTML_TEMPLATES_MAP:
             extension = ReportExtension.HTML
             report_content = self._api.get_html_report_content(
                 scan_uuid=self._scan_uuid,
@@ -412,18 +358,15 @@ class BlackBoxOperator:
             )
         else:
             extension = ReportExtension.SARIF
-            report_content = self._api.get_sarif_report_content(
-                scan_uuid=self._scan_uuid, locale=locale
-            )
-        report_path = save_report_content(
+            report_content = self._api.get_sarif_report_content(scan_uuid=self._scan_uuid, locale=locale)
+        return save_report_content(
             report_dir=output_dir,
             report_content=report_content,
-            target_name=self._api.get_site(site_uuid=self._site_uuid)['name'],
+            target_name=self._api.get_site(site_uuid=self._site_uuid).name,
             extension=extension,
             locale=locale,
             template_shortname=template_shortname,
         )
-        return report_path
 
     @ensure_attrs_set('_site_uuid', '_scan_uuid')
     def wait_for_scan(self) -> None:
@@ -431,16 +374,13 @@ class BlackBoxOperator:
             time.sleep(2.0)
         self._scan_finished = True
         if not self.is_scan_ok():
-            error_reason: Optional[str] = self.get_scan_error_reason()
+            error_reason: str | None = self.get_scan_error_reason()
             verbose = (
                 f'the error reason is "{error_reason}"'
                 if error_reason
                 else f'scan status is "{ReportScanStatus.stopped.value}"'
             )
-            raise BlackBoxError(
-                f'the scan did not succeed, {verbose}, '
-                f'see UI for details: {self._scan_url}'
-            )
+            raise BlackBoxError(f'the scan did not succeed, {verbose}, see UI for details: {self._scan_url}')
 
     @ensure_attrs_set('_site_uuid')
     def _wait_for_target(self) -> None:
@@ -450,13 +390,10 @@ class BlackBoxOperator:
     @ensure_attrs_set('_site_uuid', '_scan_uuid')
     def _create_shared_link(self) -> str:
         shared_link_uuid = self._api.create_shared_link(scan_uuid=self._scan_uuid)
-        shared_link = urllib.parse.urljoin(
-            self._ui_base_url, f'/shared/{shared_link_uuid}'
-        )
-        return shared_link
+        return urllib.parse.urljoin(self._ui_base_url, f'/shared/{shared_link_uuid}')
 
     @ensure_attrs_set('_site_uuid', '_scan_uuid')
-    def _collect_vulns(self) -> TargetVulns:  # noqa: C901
+    def _collect_vulns(self) -> TargetVulns:
         group_list = self._api.get_vuln_groups(scan_uuid=self._scan_uuid)
         vuln_report: TargetVulns = {
             'issue_groups': [],
@@ -465,139 +402,104 @@ class BlackBoxOperator:
         }
 
         for group_info in group_list:
-            issue_type = group_info['issueType']
+            issue_type = group_info.issue_type
 
-            if issue_type == 'issue':
-                issue_group = self._create_group_issue(group_info=group_info)
-                vuln_report['issue_groups'].append(issue_group)
-
-            elif issue_type == 'error_page':
-                error_page_group = self._create_group_error_page(group_info=group_info)
-                vuln_report['error_page_groups'].append(error_page_group)
-
-            elif issue_type == 'cve':
-                cve_group = self._create_group_cve(group_info=group_info)
-                vuln_report['cve_groups'].append(cve_group)
+            if issue_type == VulnerabilityIssue.ISSUE:
+                vuln_report['issue_groups'].append(self._create_group_issue(group_info=group_info))
+            elif issue_type == VulnerabilityIssue.ERROR_PAGE:
+                vuln_report['error_page_groups'].append(self._create_group_error_page(group_info=group_info))
+            elif issue_type == VulnerabilityIssue.CVE:
+                vuln_report['cve_groups'].append(self._create_group_cve(group_info=group_info))
 
         return vuln_report
 
-    def _create_group_issue(self, *, group_info: VulnGroup) -> GroupIssue:
+    def _create_group_issue(self, *, group_info: VulnGroupSchema) -> GroupIssue:
         group: GroupIssue = {
-            'severity': group_info['severity'],
-            'category': group_info['categoryLocaleKey'],
-            'group_title': group_info['groupTitle'],
+            'severity': group_info.severity.value,
+            'category': group_info.category_locale_key.value,
+            'group_title': group_info.group_title,
             'vulns': [],
         }
-
-        request_key = group_info['requestKey']
-        request_key = cast(str, request_key)
-
-        severity = group_info['severity']
-        count = group_info['count']
-
-        if count == 1:
-            group['vulns'].append(self._convert_issue(vuln=group_info['vulnerability']))
+        if group_info.count == 1:
+            group['vulns'].append(self._convert_issue(vuln=cast(IssueVuln, group_info.vulnerability)))
         else:
-            group['vulns'].extend(
-                self._read_issue_vulns(request_key=request_key, severity=severity)
-            )
+            request_key = cast(str, group_info.request_key)
+            group['vulns'].extend(self._read_issue_vulns(request_key=request_key, severity=group_info.severity))
         return group
 
-    def _create_group_error_page(self, *, group_info: VulnGroup) -> GroupErrorPage:
+    def _create_group_error_page(self, *, group_info: VulnGroupSchema) -> GroupErrorPage:
         group: GroupErrorPage = {
-            'group_title': group_info['groupTitle'],
-            'category': group_info['categoryLocaleKey'],
+            'group_title': group_info.group_title,
+            'category': group_info.category_locale_key.value,
             'vulns': [],
         }
-
-        request_key = group_info['requestKey']
-        request_key = cast(str, request_key)
-
-        count = group_info['count']
-
-        if count == 1:
-            group['vulns'].append(
-                self._convert_error_page(vuln=group_info['vulnerability'])
-            )
+        if group_info.count == 1:
+            group['vulns'].append(self._convert_error_page(vuln=cast(VulnErrorPageSchema, group_info.vulnerability)))
         else:
+            request_key = cast(str, group_info.request_key)
             group['vulns'].extend(self._read_error_page_vulns(request_key=request_key))
         return group
 
-    def _create_group_cve(self, *, group_info: VulnGroup) -> GroupCve:
+    def _create_group_cve(self, *, group_info: VulnGroupSchema) -> GroupCve:
         group: GroupCve = {
-            'category': group_info['categoryLocaleKey'],
-            'group_title': group_info['groupTitle'],
+            'category': group_info.category_locale_key.value,
+            'group_title': group_info.group_title,
             'vulns': [],
         }
-
-        request_key = group_info['requestKey']
-        request_key = cast(str, request_key)
-
-        count = group_info['count']
-
-        if count == 1:
-            group['vulns'].append(self._convert_cve(vuln=group_info['vulnerability']))
+        if group_info.count == 1:
+            group['vulns'].append(self._convert_cve(vuln=cast(CveVuln, group_info.vulnerability)))
         else:
+            request_key = cast(str, group_info.request_key)
             group['vulns'].extend(self._read_cve_vulns(request_key=request_key))
         return group
 
-    def _convert_issue(self, *, vuln: VulnCommon) -> VulnIssue:
-        v: VulnIssue = {
-            'url': vuln['urlFull'],
-        }
-        return v
+    @staticmethod
+    def _convert_issue(*, vuln: IssueVuln) -> VulnIssue:
+        return {'url': vuln.url_full or ''}
 
-    def _convert_error_page(self, *, vuln: VulnCommon) -> VulnErrorPage:
-        v: VulnErrorPage = {
-            'url': vuln['url'],
-        }
-        return v
+    @staticmethod
+    def _convert_error_page(*, vuln: VulnErrorPageSchema) -> VulnErrorPage:
+        return {'url': vuln.url}
 
-    def _convert_cve(self, *, vuln: VulnCommon) -> VulnCve:
-        v: VulnCve = {
-            'cve_id': vuln['cveId'],
-            'vector': vuln['cvssVector'],
-        }
-        return v
+    @staticmethod
+    def _convert_cve(*, vuln: CveVuln) -> VulnCve:
+        return {'cve_id': vuln.cve_id, 'vector': vuln.cvss_vector}
 
-    def _read_issue_vulns(self, *, request_key: str, severity: str) -> List[VulnIssue]:
-        vulns = self._read_all_vulns(
-            issue_type='issue',
+    def _read_issue_vulns(self, *, request_key: str, severity: Severity) -> list[VulnIssue]:
+        items = self._read_all_vulns(
+            issue_type=VulnerabilityIssue.ISSUE,
             request_key=request_key,
             severity=severity,
         )
+        return [self._convert_issue(vuln=cast(IssueVuln, item)) for item in items]
 
-        return [self._convert_issue(vuln=v) for v in vulns]
-
-    def _read_error_page_vulns(self, *, request_key: str) -> List[VulnErrorPage]:
-        vulns = self._read_all_vulns(
-            issue_type='error_page',
+    def _read_error_page_vulns(self, *, request_key: str) -> list[VulnErrorPage]:
+        items = self._read_all_vulns(
+            issue_type=VulnerabilityIssue.ERROR_PAGE,
             request_key=request_key,
-            severity='info',
+            severity=Severity.INFO,
         )
+        return [self._convert_error_page(vuln=cast(VulnErrorPageSchema, item)) for item in items]
 
-        return [self._convert_error_page(vuln=v) for v in vulns]
-
-    def _read_cve_vulns(self, *, request_key: str) -> List[VulnCve]:
-        vulns = self._read_all_vulns(
-            issue_type='cve',
+    def _read_cve_vulns(self, *, request_key: str) -> list[VulnCve]:
+        items = self._read_all_vulns(
+            issue_type=VulnerabilityIssue.CVE,
             request_key=request_key,
-            severity='info',
+            severity=Severity.INFO,
         )
-
-        return [self._convert_cve(vuln=v) for v in vulns]
+        return [self._convert_cve(vuln=cast(CveVuln, item)) for item in items]
 
     @ensure_attrs_set('_site_uuid', '_scan_uuid')
     def _read_all_vulns(
-        self, *, issue_type: str, request_key: str, severity: str
-    ) -> List[VulnCommon]:
-        """
-        Just wrapper for reading all vulns
-        """
-        vulns: List[VulnCommon] = []
-        has_next_page = True
+        self,
+        *,
+        issue_type: VulnerabilityIssue,
+        request_key: str,
+        severity: Severity,
+    ) -> list[VulnCVESchema | VulnErrorPageSchema | VulnTrendingSchema | VulnWESchema]:
+        vulns: list[VulnCVESchema | VulnErrorPageSchema | VulnTrendingSchema | VulnWESchema] = []
         page = 1  # page starts with 1
-        while has_next_page is True:
+        while True:
             vuln_page = self._api.get_vuln_group_page(
                 scan_uuid=self._scan_uuid,
                 issue_type=issue_type,
@@ -606,93 +508,59 @@ class BlackBoxOperator:
                 limit=PAGE_VULNS_LIMIT,
                 page=page,
             )
-            vulns.extend(vuln_page['items'])
-            has_next_page = vuln_page['totalCount'] > vuln_page['currentPage']
+            vulns.extend(vuln_page.items)
+            if vuln_page.total_count <= vuln_page.current_page:
+                break
             page += 1
-
         return vulns
 
-    def _get_new_profile_uuid(
-        self, *, current_settings: SiteSettings, profile_uuid: Optional[str]
-    ) -> str:
+    @staticmethod
+    def _report_scan_status(status: ScanStatus) -> ReportScanStatus:
+        if status in IDLE_SCAN_STATUSES:
+            return ReportScanStatus(status.value)
+        return ReportScanStatus.in_progress
+
+    @staticmethod
+    def _get_new_profile_uuid(*, current_settings: SiteSettingsInfoSchema, profile_uuid: str | None) -> str:
         if profile_uuid is None:
-            profile_uuid = current_settings['profile']['uuid']
+            return current_settings.profile.uuid
         return profile_uuid
 
-    def _get_new_auth_uuid(
-        self, *, current_settings: SiteSettings, auth_uuid: Optional[str]
-    ) -> Optional[str]:
-        if auth_uuid is None and current_settings['authentication'] is not None:
-            auth_uuid = current_settings['authentication']['uuid']
-        elif auth_uuid == RESET_AUTH_PROFILE:
-            auth_uuid = None
+    @staticmethod
+    def _get_new_auth_uuid(*, current_settings: SiteSettingsInfoSchema, auth_uuid: str | None) -> str | None:
+        if auth_uuid is None and current_settings.authentication is not None:
+            return current_settings.authentication.uuid
+        if auth_uuid == RESET_AUTH_PROFILE:
+            return None
         return auth_uuid
 
+    @staticmethod
     def _get_new_api_profile_uuid(
-        self,
         *,
-        current_settings: SiteSettings,
-        api_profile_uuid: Optional[str] = None,
-    ) -> Optional[str]:
-        if api_profile_uuid is None and current_settings['apiProfile'] is not None:
-            api_profile_uuid = current_settings['apiProfile']['uuid']
-        elif api_profile_uuid == RESET_API_PROFILE:
-            api_profile_uuid = None
+        current_settings: SiteSettingsInfoSchema,
+        api_profile_uuid: str | None = None,
+    ) -> str | None:
+        if api_profile_uuid is None and current_settings.api_profile is not None:
+            return current_settings.api_profile.uuid
+        if api_profile_uuid == RESET_API_PROFILE:
+            return None
         return api_profile_uuid
 
-    def _is_scan_profile_changed(
-        self, *, current_scan_profile: ScanProfile, new_profile_uuid: str
-    ) -> bool:
-        return current_scan_profile['uuid'] != new_profile_uuid
-
-    def _is_auth_profile_changed(
-        self,
-        *,
-        current_auth_profile: Optional[AuthenticationProfile],
-        new_auth_uuid: Optional[str],
-    ) -> bool:
-        return (
-            current_auth_profile is not None
-            and new_auth_uuid != current_auth_profile['uuid']
-            or current_auth_profile is None
-            and new_auth_uuid is not None
-        )
-
-    def _is_api_profile_changed(
-        self,
-        *,
-        current_api_profile: Optional[APIProfile],
-        new_api_uuid: Optional[str],
-    ) -> bool:
-        return (
-            current_api_profile is not None
-            and new_api_uuid != current_api_profile['uuid']
-            or current_api_profile is None
-            and new_api_uuid is not None
-        )
-
+    @staticmethod
     def _is_settings_changed(
-        self,
         *,
-        current_settings: SiteSettings,
+        current_settings: SiteSettingsInfoSchema,
         new_profile_uuid: str,
-        new_auth_uuid: Optional[str],
-        new_api_profile_uuid: Optional[str],
+        new_auth_uuid: str | None,
+        new_api_profile_uuid: str | None,
     ) -> bool:
-        return (
-            self._is_scan_profile_changed(
-                current_scan_profile=current_settings['profile'],
-                new_profile_uuid=new_profile_uuid,
-            )
-            or self._is_auth_profile_changed(
-                current_auth_profile=current_settings['authentication'],
-                new_auth_uuid=new_auth_uuid,
-            )
-            or self._is_api_profile_changed(
-                current_api_profile=current_settings['apiProfile'],
-                new_api_uuid=new_api_profile_uuid,
-            )
-        )
+        if current_settings.profile.uuid != new_profile_uuid:
+            return True
+        current_auth_uuid = current_settings.authentication.uuid if current_settings.authentication else None
+        if current_auth_uuid != new_auth_uuid:
+            return True
+        current_api_uuid = current_settings.api_profile.uuid if current_settings.api_profile else None
+        return current_api_uuid != new_api_profile_uuid
 
     @staticmethod
     def _convert_error_json(*, error: BlackBoxError) -> ErrorReport:
@@ -704,8 +572,8 @@ class BlackBoxOperator:
                 'json': None,
             }
             if (
-                isinstance(error.response, requests.Response)
-                and error.response.headers['Content-Type'] == 'application/json'
+                isinstance(error.response, httpx.Response)
+                and error.response.headers.get('Content-Type') == 'application/json'
             ):
                 error_report['json'] = error.response.json()
         elif isinstance(error, BlackBoxUrlError):
@@ -722,174 +590,6 @@ class BlackBoxOperator:
             }
 
         return error_report
-
-    def _convert_auth_json(
-        self, *, raw_auth_data: Dict[str, str], auth_type: AuthenticationType
-    ) -> Authentication:
-        _converters: Dict[AuthenticationType, Callable[..., Authentication]] = {
-            AuthenticationType.HTTP_BASIC: self._convert_http_basic_auth_json,
-            AuthenticationType.HTML_AUTO_FORM: self._convert_html_auto_form_auth_json,
-            AuthenticationType.HTML_FORM_BASED: self._convert_html_form_based_auth_json,
-            AuthenticationType.RAW_COOKIE: self._convert_raw_cookie_auth_json,
-            AuthenticationType.API_KEY: self._convert_api_key_auth_json,
-            AuthenticationType.BEARER: self._convert_bearer_auth_json,
-        }
-        return _converters[auth_type](raw_auth_data=raw_auth_data)
-
-    def _pop_auth_type_from_raw_data(
-        self, *, raw_auth_data: Dict[str, str]
-    ) -> AuthenticationType:
-        auth_type = raw_auth_data.pop(AUTH_TYPE_KEY, None)
-        if not auth_type:
-            raise BlackBoxError('authentication type should be provided')
-        elif auth_type not in list(AuthenticationType):
-            raise BlackBoxError('unknown authentication type')
-        return AuthenticationType(auth_type)
-
-    def _convert_http_basic_auth_json(
-        self, *, raw_auth_data: Dict[str, str]
-    ) -> HttpBasic:
-        username = raw_auth_data.pop(AUTH_USERNAME_KEY, '')
-        password = raw_auth_data.pop(AUTH_PASSWORD_KEY, '')
-        if not username or not password:
-            raise BlackBoxError('username and password should be provided')
-        auth_json: HttpBasic = {
-            'username': username,
-            'password': password,
-        }
-        return auth_json
-
-    def _convert_html_auto_form_auth_json(
-        self, *, raw_auth_data: Dict[str, str]
-    ) -> HtmlAutoForm:
-        username = raw_auth_data.pop(AUTH_USERNAME_KEY, '')
-        password = raw_auth_data.pop(AUTH_PASSWORD_KEY, '')
-        form_url = raw_auth_data.pop(AUTH_FORM_URL_KEY, '')
-        success_string = raw_auth_data.pop(AUTH_SUCCESS_STRING_KEY, '')
-        if not all(
-            (
-                username,
-                password,
-                form_url,
-                success_string,
-            )
-        ):
-            raise BlackBoxError(
-                'username, password, form url and success string should be provided'
-            )
-        auth_json: HtmlAutoForm = {
-            'username': username,
-            'password': password,
-            'formUrl': form_url,
-            'successString': success_string,
-        }
-        return auth_json
-
-    def _convert_html_form_based_auth_json(
-        self, *, raw_auth_data: Dict[str, str]
-    ) -> HtmlFormBased:
-        form_url = raw_auth_data.pop(AUTH_FORM_URL_KEY, '')
-        form_xpath = raw_auth_data.pop(AUTH_FORM_X_PATH_KEY, '')
-        username_field = raw_auth_data.pop(AUTH_USERNAME_FIELD_KEY, '')
-        username_value = raw_auth_data.pop(AUTH_USERNAME_KEY, '')
-        password_field = raw_auth_data.pop(AUTH_PASSWORD_FIELD_KEY, '')
-        password_value = raw_auth_data.pop(AUTH_PASSWORD_KEY, '')
-        regexp_of_success = raw_auth_data.pop(AUTH_REGEXP_OF_SUCCESS_KEY, '')
-        submit_value = raw_auth_data.pop(AUTH_SUBMIT_VALUE_KEY, None)
-        if not all(
-            (
-                form_url,
-                form_xpath,
-                username_field,
-                username_value,
-                password_field,
-                password_value,
-                regexp_of_success,
-            )
-        ):
-            raise BlackBoxError(
-                'form url, form xpath, username field, username value, password field, '
-                'password value and regexp of success string should be provided'
-            )
-        auth_json: HtmlFormBased = {
-            'formUrl': form_url,
-            'formXPath': form_xpath,
-            'usernameField': username_field,
-            'usernameValue': username_value,
-            'passwordField': password_field,
-            'passwordValue': password_value,
-            'regexpOfSuccess': regexp_of_success,
-            'submitValue': submit_value,
-        }
-        return auth_json
-
-    def _convert_raw_cookie_auth_json(
-        self, *, raw_auth_data: Dict[str, str]
-    ) -> RawCookie:
-        cookies = raw_auth_data.pop(AUTH_COOKIES_KEY, '')
-        success_url = raw_auth_data.pop(AUTH_SUCCESS_URL_KEY, '')
-        regexp_of_success = raw_auth_data.pop(AUTH_REGEXP_OF_SUCCESS_KEY, '')
-        if not all(
-            (
-                cookies,
-                success_url,
-                regexp_of_success,
-            )
-        ):
-            raise BlackBoxError(
-                'cookies, success url and regexp of success should be provided'
-            )
-        auth_json: RawCookie = {
-            'cookies': cookies.rstrip(';').split(';'),
-            'successUrl': success_url,
-            'regexpOfSuccess': regexp_of_success,
-        }
-        return auth_json
-
-    def _convert_api_key_auth_json(self, *, raw_auth_data: Dict[str, str]) -> ApiKey:
-        place = raw_auth_data.pop(AUTH_APIKEY_PLACE_KEY, '')
-        name = raw_auth_data.pop(AUTH_APIKEY_NAME_KEY, '')
-        value = raw_auth_data.pop(AUTH_APIKEY_VALUE_KEY, '')
-        success_url = raw_auth_data.pop(AUTH_SUCCESS_URL_KEY, '')
-        success_string = raw_auth_data.pop(AUTH_SUCCESS_STRING_KEY, None)
-        if not all(
-            (
-                place,
-                name,
-                value,
-                success_url,
-            )
-        ):
-            raise BlackBoxError('place, name, value and success url should be provided')
-        elif place not in list(ApiKeyPlace):
-            verbose = ', '.join(ApiKeyPlace)
-            raise BlackBoxError(f'place can be one of: {verbose}')
-        auth_json: ApiKey = {
-            'place': ApiKeyPlace(place),
-            'name': name,
-            'value': value,
-            'successUrl': success_url,
-            'successString': success_string,
-        }
-        return auth_json
-
-    def _convert_bearer_auth_json(self, *, raw_auth_data: Dict[str, str]) -> Bearer:
-        token = raw_auth_data.pop(AUTH_TOKEN_KEY, '')
-        success_url = raw_auth_data.pop(AUTH_SUCCESS_URL_KEY, '')
-        success_string = raw_auth_data.pop(AUTH_SUCCESS_STRING_KEY, None)
-        if not all(
-            (
-                token,
-                success_url,
-            )
-        ):
-            raise BlackBoxError('token and success url should be provided')
-        auth_json: Bearer = {
-            'token': token,
-            'successUrl': success_url,
-            'successString': success_string,
-        }
-        return auth_json
 
     @property
     def _scan_url(self) -> str:

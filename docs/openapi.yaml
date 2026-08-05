@@ -1,0 +1,5687 @@
+components:
+  schemas:
+    APIKeyInfoSchema:
+      properties:
+        name:
+          type: string
+        place:
+          $ref: '#/components/schemas/ApiKeyPlace'
+        successString:
+          oneOf:
+          - type: string
+          - type: 'null'
+        successUrl:
+          type: string
+        value:
+          type: string
+      required:
+      - name
+      - place
+      - successUrl
+      - value
+      title: APIKeyInfoSchema
+      type: object
+    APIKeySchema:
+      properties:
+        name:
+          minLength: 1
+          type: string
+        place:
+          $ref: '#/components/schemas/ApiKeyPlace'
+        successString:
+          oneOf:
+          - type: string
+          - type: 'null'
+        successUrl:
+          minLength: 1
+          type: string
+        value:
+          minLength: 1
+          type: string
+      required:
+      - name
+      - place
+      - successUrl
+      - value
+      title: APIKeySchema
+      type: object
+    APIProfileSchema:
+      properties:
+        apiSchemas:
+          items:
+            $ref: '#/components/schemas/APISchemaShortSchema'
+          type: array
+        createdAt:
+          format: date-time
+          type: string
+        group:
+          $ref: '#/components/schemas/GroupShortInfoSchema'
+        name:
+          type: string
+        uuid:
+          type: string
+      required:
+      - apiSchemas
+      - createdAt
+      - group
+      - name
+      - uuid
+      title: APIProfileSchema
+      type: object
+    APIProfileShortInfoSchema:
+      properties:
+        countOfSchemas:
+          type: integer
+        group:
+          oneOf:
+          - $ref: '#/components/schemas/GroupShortInfoSchema'
+          - type: 'null'
+        name:
+          type: string
+        uuid:
+          type: string
+      required:
+      - countOfSchemas
+      - name
+      - uuid
+      title: APIProfileShortInfoSchema
+      type: object
+    APIProfilesConflicts:
+      examples:
+      - sites:
+        - fLqpHUrVGFBaiJKfHyEu
+      properties:
+        sites:
+          examples:
+          - - FwrkivNyOTjTEvAUueXg
+          items:
+            examples:
+            - hWjGDYPstccqXcjHsjXc
+            type: string
+          type: array
+      required:
+      - sites
+      title: APIProfilesConflicts
+      type: object
+    APISchemaContentTypes:
+      enum:
+      - application/yaml
+      - application/json
+      - link
+      title: APISchemaContentTypes
+      type: string
+    APISchemaFileShortInfo:
+      properties:
+        uuid:
+          type: string
+      required:
+      - uuid
+      title: APISchemaFileShortInfo
+      type: object
+    APISchemaFullContentSchema:
+      properties:
+        data:
+          description: link for type `link`, presigned url for others
+          type: string
+        type:
+          $ref: '#/components/schemas/APISchemaContentTypes'
+      required:
+      - data
+      - type
+      title: APISchemaFullContentSchema
+      type: object
+    APISchemaFullSchema:
+      properties:
+        content:
+          $ref: '#/components/schemas/APISchemaFullContentSchema'
+        harOptions:
+          oneOf:
+          - $ref: '#/components/schemas/APISchemaHAROptionsSchema'
+          - type: 'null'
+        name:
+          type: string
+        openapiOptions:
+          oneOf:
+          - $ref: '#/components/schemas/APISchemaOpenAPIOptionsSchema'
+          - type: 'null'
+        type:
+          $ref: '#/components/schemas/APISchemaTypes'
+        uuid:
+          type: string
+      required:
+      - content
+      - name
+      - type
+      - uuid
+      title: APISchemaFullSchema
+      type: object
+    APISchemaHAROptionsSchema:
+      properties:
+        cookieBlacklist:
+          items:
+            type: string
+          type: array
+        headerBlacklist:
+          items:
+            type: string
+          type: array
+      required: []
+      title: APISchemaHAROptionsSchema
+      type: object
+    APISchemaOpenAPIOptionsSchema:
+      properties:
+        prefix:
+          default: ''
+          type: string
+      required: []
+      title: APISchemaOpenAPIOptionsSchema
+      type: object
+    APISchemaShortContentSchema:
+      properties:
+        data:
+          description: link for type `link`, null for others
+          oneOf:
+          - type: string
+          - type: 'null'
+        type:
+          $ref: '#/components/schemas/APISchemaContentTypes'
+      required:
+      - type
+      title: APISchemaShortContentSchema
+      type: object
+    APISchemaShortSchema:
+      properties:
+        content:
+          $ref: '#/components/schemas/APISchemaShortContentSchema'
+        harOptions:
+          oneOf:
+          - $ref: '#/components/schemas/APISchemaHAROptionsSchema'
+          - type: 'null'
+        name:
+          type: string
+        openapiOptions:
+          oneOf:
+          - $ref: '#/components/schemas/APISchemaOpenAPIOptionsSchema'
+          - type: 'null'
+        type:
+          $ref: '#/components/schemas/APISchemaTypes'
+        uuid:
+          type: string
+      required:
+      - content
+      - name
+      - type
+      - uuid
+      title: APISchemaShortSchema
+      type: object
+    APISchemaTypes:
+      enum:
+      - openapi
+      - har
+      title: APISchemaTypes
+      type: string
+    ApiKeyPlace:
+      enum:
+      - COOKIE
+      - HEADER
+      - QUERY
+      title: ApiKeyPlace
+      type: string
+    AuthChainCreateSchema:
+      properties:
+        groupUUID:
+          format: uuid
+          type: string
+        name:
+          maxLength: 50
+          type: string
+        profiles:
+          items:
+            format: uuid
+            type: string
+          type: array
+      required:
+      - groupUUID
+      - name
+      - profiles
+      title: AuthChainCreateSchema
+      type: object
+    AuthChainFullInfoSchema:
+      properties:
+        group:
+          $ref: '#/components/schemas/GroupShortInfoSchema'
+        name:
+          type: string
+        profiles:
+          items:
+            format: uuid
+            type: string
+          type: array
+        uuid:
+          format: uuid
+          type: string
+      required:
+      - group
+      - name
+      - profiles
+      - uuid
+      title: AuthChainFullInfoSchema
+      type: object
+    AuthChainShortInfoSchema:
+      properties:
+        group:
+          $ref: '#/components/schemas/GroupShortInfoSchema'
+        name:
+          type: string
+        uuid:
+          format: uuid
+          type: string
+      required:
+      - group
+      - name
+      - uuid
+      title: AuthChainShortInfoSchema
+      type: object
+    AuthChainUpdateSchema:
+      properties:
+        name:
+          oneOf:
+          - type: string
+          - type: 'null'
+        profiles:
+          oneOf:
+          - items:
+              format: uuid
+              type: string
+            type: array
+          - type: 'null'
+      required: []
+      title: AuthChainUpdateSchema
+      type: object
+    AuthChainsConflicts:
+      examples:
+      - sites:
+        - CqkZELcMizuuPkXSzTCV
+      properties:
+        sites:
+          examples:
+          - - ImAYyNsCOKFpczLsLydE
+          items:
+            examples:
+            - RbiZpNbycmaJxsvJnicH
+            type: string
+          type: array
+      required:
+      - sites
+      title: AuthChainsConflicts
+      type: object
+    AuthDataStatus:
+      enum:
+      - not_checked
+      - checking
+      - success
+      - failed
+      title: AuthDataStatus
+      type: string
+    AuthProfileCreateSchema:
+      properties:
+        apiKey:
+          oneOf:
+          - $ref: '#/components/schemas/APIKeySchema'
+          - type: 'null'
+        bearer:
+          oneOf:
+          - $ref: '#/components/schemas/BearerSchema'
+          - type: 'null'
+        groupUUID:
+          format: uuid
+          type: string
+        htmlAutoForm:
+          oneOf:
+          - $ref: '#/components/schemas/HTMLAutoFormSchema'
+          - type: 'null'
+        htmlFormBased:
+          oneOf:
+          - $ref: '#/components/schemas/HTMLFormBasedSchema'
+          - type: 'null'
+        httpBasic:
+          oneOf:
+          - $ref: '#/components/schemas/HTTPBasicSchema'
+          - type: 'null'
+        name:
+          maxLength: 50
+          minLength: 1
+          type: string
+        rawCookie:
+          oneOf:
+          - $ref: '#/components/schemas/RawCookieSchema'
+          - type: 'null'
+        type:
+          $ref: '#/components/schemas/AuthenticationType'
+      required:
+      - groupUUID
+      - name
+      - type
+      title: AuthProfileCreateSchema
+      type: object
+    AuthProfileFullInfoSchema:
+      properties:
+        apiKey:
+          oneOf:
+          - $ref: '#/components/schemas/APIKeyInfoSchema'
+          - type: 'null'
+        bearer:
+          oneOf:
+          - $ref: '#/components/schemas/BearerInfoSchema'
+          - type: 'null'
+        group:
+          $ref: '#/components/schemas/GroupShortInfoSchema'
+        htmlAutoForm:
+          oneOf:
+          - $ref: '#/components/schemas/HTMLAutoFormInfoSchema'
+          - type: 'null'
+        htmlFormBased:
+          oneOf:
+          - $ref: '#/components/schemas/HTMLFormBasedInfoSchema'
+          - type: 'null'
+        httpBasic:
+          oneOf:
+          - $ref: '#/components/schemas/HTTPBasicInfoSchema'
+          - type: 'null'
+        name:
+          type: string
+        rawCookie:
+          oneOf:
+          - $ref: '#/components/schemas/RawCookieInfoSchema'
+          - type: 'null'
+        type:
+          $ref: '#/components/schemas/AuthenticationType'
+      required:
+      - group
+      - name
+      - type
+      title: AuthProfileFullInfoSchema
+      type: object
+    AuthProfileShortInfoSchema:
+      properties:
+        group:
+          $ref: '#/components/schemas/GroupShortInfoSchema'
+        name:
+          type: string
+        uuid:
+          type: string
+      required:
+      - group
+      - name
+      - uuid
+      title: AuthProfileShortInfoSchema
+      type: object
+    AuthProfileUpdateSchema:
+      properties:
+        apiKey:
+          oneOf:
+          - $ref: '#/components/schemas/APIKeySchema'
+          - type: 'null'
+        bearer:
+          oneOf:
+          - $ref: '#/components/schemas/BearerSchema'
+          - type: 'null'
+        htmlAutoForm:
+          oneOf:
+          - $ref: '#/components/schemas/HTMLAutoFormSchema'
+          - type: 'null'
+        htmlFormBased:
+          oneOf:
+          - $ref: '#/components/schemas/HTMLFormBasedSchema'
+          - type: 'null'
+        httpBasic:
+          oneOf:
+          - $ref: '#/components/schemas/HTTPBasicSchema'
+          - type: 'null'
+        name:
+          oneOf:
+          - type: string
+          - type: 'null'
+        rawCookie:
+          oneOf:
+          - $ref: '#/components/schemas/RawCookieSchema'
+          - type: 'null'
+        type:
+          oneOf:
+          - $ref: '#/components/schemas/AuthenticationType'
+          - type: 'null'
+      required: []
+      title: AuthProfileUpdateSchema
+      type: object
+    AuthProfilesConflicts:
+      examples:
+      - authChains:
+        - KiaVjcODaCAWEhGPYqEc
+        sites:
+        - QPuqoreSwjJjTaCHrkUE
+      properties:
+        authChains:
+          examples:
+          - - JDnIcAIrFcrzRBWtUEyj
+          items:
+            examples:
+            - IcNiBCdpVNqYdHPSHMmO
+            type: string
+          type: array
+        sites:
+          examples:
+          - - psZfntyvohCiaNNsTiUJ
+          items:
+            examples:
+            - TcKQUIcwTvBMEsEyrdnZ
+            type: string
+          type: array
+      required:
+      - authChains
+      - sites
+      title: AuthProfilesConflicts
+      type: object
+    AuthProfilesNotFoundUUIDs:
+      examples:
+      - UUIDs:
+        - wIRVLedtxqMNuKkXmitS
+      properties:
+        UUIDs:
+          examples:
+          - - DXChHqWgxJYBtOOVLgZW
+          items:
+            examples:
+            - pSjGbFxUQOrIizuyolBH
+            type: string
+          type: array
+      required:
+      - UUIDs
+      title: AuthProfilesNotFoundUUIDs
+      type: object
+    AuthSettingsInfoSchema:
+      properties:
+        name:
+          type: string
+        type:
+          $ref: '#/components/schemas/AuthSettingsType'
+        uuid:
+          type: string
+      required:
+      - name
+      - type
+      - uuid
+      title: AuthSettingsInfoSchema
+      type: object
+    AuthSettingsType:
+      enum:
+      - user
+      - chain
+      title: AuthSettingsType
+      type: string
+    AuthenticationType:
+      enum:
+      - HTTP_BASIC
+      - HTML_AUTO_FORM
+      - HTML_FORM_BASED
+      - RAW_COOKIE
+      - API_KEY
+      - BEARER
+      title: AuthenticationType
+      type: string
+    BearerInfoSchema:
+      properties:
+        successString:
+          oneOf:
+          - type: string
+          - type: 'null'
+        successUrl:
+          type: string
+        token:
+          type: string
+      required:
+      - successUrl
+      - token
+      title: BearerInfoSchema
+      type: object
+    BearerSchema:
+      properties:
+        successString:
+          oneOf:
+          - type: string
+          - type: 'null'
+        successUrl:
+          minLength: 1
+          type: string
+        token:
+          minLength: 1
+          type: string
+      required:
+      - successUrl
+      - token
+      title: BearerSchema
+      type: object
+    ChannelSchema:
+      properties:
+        httpVerb:
+          type: string
+        parameterName:
+          type: string
+        type:
+          oneOf:
+          - type: string
+          - type: 'null'
+      required:
+      - httpVerb
+      - parameterName
+      - type
+      title: ChannelSchema
+      type: object
+    CrawlingType:
+      enum:
+      - smart
+      - full_crawling_mode
+      title: CrawlingType
+      type: string
+    ErrorFieldAPIProfilesConflicts:
+      examples: []
+      properties:
+        code:
+          examples:
+          - VAsuEshTKFLZjQQrDxkw
+          type: string
+        description:
+          examples:
+          - mmFEvCbabcOYguawIGUC
+          oneOf:
+          - examples:
+            - lsYjSBdQaRrVLsGZikpQ
+            type: string
+          - type: 'null'
+        details:
+          $ref: '#/components/schemas/APIProfilesConflicts'
+      required:
+      - code
+      - details
+      title: ErrorFieldAPIProfilesConflicts
+      type: object
+    ErrorFieldAuthChainsConflicts:
+      examples: []
+      properties:
+        code:
+          examples:
+          - IxlzypMVFbCGQpmtiObD
+          type: string
+        description:
+          examples:
+          - NQPIMLBPjLHCFVPJUTrS
+          oneOf:
+          - examples:
+            - zYMIZKmHivKjwlvmKRzL
+            type: string
+          - type: 'null'
+        details:
+          $ref: '#/components/schemas/AuthChainsConflicts'
+      required:
+      - code
+      - details
+      title: ErrorFieldAuthChainsConflicts
+      type: object
+    ErrorFieldAuthProfilesConflicts:
+      examples: []
+      properties:
+        code:
+          examples:
+          - UHSQKWNxguFbFvydeHoi
+          type: string
+        description:
+          examples:
+          - lDETRahgoMzLRtalGDkN
+          oneOf:
+          - examples:
+            - XhHSyYvDSaSRiKojAKtr
+            type: string
+          - type: 'null'
+        details:
+          $ref: '#/components/schemas/AuthProfilesConflicts'
+      required:
+      - code
+      - details
+      title: ErrorFieldAuthProfilesConflicts
+      type: object
+    ErrorFieldAuthProfilesNotFoundUUIDs:
+      examples: []
+      properties:
+        code:
+          examples:
+          - PQDHNwALGFHBlpJvStIg
+          type: string
+        description:
+          examples:
+          - rEizsaJAOTcLxTgRweyT
+          oneOf:
+          - examples:
+            - FJQuXZBMSEgIxSkajitk
+            type: string
+          - type: 'null'
+        details:
+          $ref: '#/components/schemas/AuthProfilesNotFoundUUIDs'
+      required:
+      - code
+      - details
+      title: ErrorFieldAuthProfilesNotFoundUUIDs
+      type: object
+    ErrorFieldInvalidModules:
+      examples: []
+      properties:
+        code:
+          examples:
+          - qpwwwnNUDLQoTDHCTzKn
+          type: string
+        description:
+          examples:
+          - HJgmygZdKTdywYXEMTff
+          oneOf:
+          - examples:
+            - HIfMOBFFOLOAyhIHOHzd
+            type: string
+          - type: 'null'
+        details:
+          $ref: '#/components/schemas/InvalidModules'
+      required:
+      - code
+      - details
+      title: ErrorFieldInvalidModules
+      type: object
+    ErrorFieldNoneType:
+      examples: []
+      properties:
+        code:
+          examples:
+          - sGGkFTTHdwecnxNGoKAA
+          type: string
+        description:
+          examples:
+          - rqMFojiePWlMXjDwYTak
+          oneOf:
+          - examples:
+            - nwrLzxyyJLPvPYZLdSRa
+            type: string
+          - type: 'null'
+        details:
+          examples:
+          - null
+          type: 'null'
+      required:
+      - code
+      - details
+      title: ErrorFieldNoneType
+      type: object
+    ErrorFieldProfilesConflicts:
+      examples: []
+      properties:
+        code:
+          examples:
+          - vwpSrSdGjWcRNudKLPJQ
+          type: string
+        description:
+          examples:
+          - nFkPgkyqwgKieCQILnsF
+          oneOf:
+          - examples:
+            - aBynwngpZdDQSxLyDhQP
+            type: string
+          - type: 'null'
+        details:
+          $ref: '#/components/schemas/ProfilesConflicts'
+      required:
+      - code
+      - details
+      title: ErrorFieldProfilesConflicts
+      type: object
+    ErrorFieldRoleAttributeDescriptionSchema:
+      examples: []
+      properties:
+        code:
+          examples:
+          - DwEkQQHiBrmXZcSFtoJx
+          type: string
+        description:
+          examples:
+          - hmGJHERyPYwSLUcVNYZo
+          oneOf:
+          - examples:
+            - vbaBcefxZzxwAxLUKwHV
+            type: string
+          - type: 'null'
+        details:
+          $ref: '#/components/schemas/RoleAttributeDescriptionSchema'
+      required:
+      - code
+      - details
+      title: ErrorFieldRoleAttributeDescriptionSchema
+      type: object
+    ErrorFieldRoleAttributeDescriptionSchemaNone:
+      examples: []
+      properties:
+        code:
+          examples:
+          - SCXHPiclvcWpPcSrAFFp
+          type: string
+        description:
+          examples:
+          - EwbdtKiYsfjVRIdHbmdI
+          oneOf:
+          - examples:
+            - uVSLVIpXssGAZvWxlBJp
+            type: string
+          - type: 'null'
+        details:
+          examples:
+          - limits: nuCaldRKRIbrTyqiVesq
+            permissions: HVMYoMLcDTblBFCTtICQ
+          oneOf:
+          - $ref: '#/components/schemas/RoleAttributeDescriptionSchema'
+          - type: 'null'
+      required:
+      - code
+      title: ErrorFieldUnionRoleAttributeDescriptionSchema,NoneType
+      type: object
+    ErrorSchemaAPIProfilesConflicts:
+      examples: []
+      properties:
+        detail:
+          examples:
+          - ctxrbGzKsdnjxheBhfgK
+          type: string
+        error:
+          $ref: '#/components/schemas/ErrorFieldAPIProfilesConflicts'
+      required:
+      - detail
+      - error
+      title: ErrorSchemaAPIProfilesConflicts
+      type: object
+    ErrorSchemaAuthChainsConflicts:
+      examples: []
+      properties:
+        detail:
+          examples:
+          - UEWjPmuAvAedLooKNBQs
+          type: string
+        error:
+          $ref: '#/components/schemas/ErrorFieldAuthChainsConflicts'
+      required:
+      - detail
+      - error
+      title: ErrorSchemaAuthChainsConflicts
+      type: object
+    ErrorSchemaAuthProfilesConflicts:
+      examples: []
+      properties:
+        detail:
+          examples:
+          - biAFVtQypXzKpUycdswf
+          type: string
+        error:
+          $ref: '#/components/schemas/ErrorFieldAuthProfilesConflicts'
+      required:
+      - detail
+      - error
+      title: ErrorSchemaAuthProfilesConflicts
+      type: object
+    ErrorSchemaAuthProfilesNotFoundUUIDs:
+      examples: []
+      properties:
+        detail:
+          examples:
+          - dteaQCDUeXNSQubZGLKp
+          type: string
+        error:
+          $ref: '#/components/schemas/ErrorFieldAuthProfilesNotFoundUUIDs'
+      required:
+      - detail
+      - error
+      title: ErrorSchemaAuthProfilesNotFoundUUIDs
+      type: object
+    ErrorSchemaInvalidModules:
+      examples: []
+      properties:
+        detail:
+          examples:
+          - HVKViojCXkxyCpxaaBfF
+          type: string
+        error:
+          $ref: '#/components/schemas/ErrorFieldInvalidModules'
+      required:
+      - detail
+      - error
+      title: ErrorSchemaInvalidModules
+      type: object
+    ErrorSchemaNoneType:
+      examples: []
+      properties:
+        detail:
+          examples:
+          - SDBQNXqcJcDSuFiiFSZb
+          type: string
+        error:
+          $ref: '#/components/schemas/ErrorFieldNoneType'
+      required:
+      - detail
+      - error
+      title: ErrorSchemaNoneType
+      type: object
+    ErrorSchemaProfilesConflicts:
+      examples: []
+      properties:
+        detail:
+          examples:
+          - ptOeHpnQQdeswvHtlYZQ
+          type: string
+        error:
+          $ref: '#/components/schemas/ErrorFieldProfilesConflicts'
+      required:
+      - detail
+      - error
+      title: ErrorSchemaProfilesConflicts
+      type: object
+    ErrorSchemaRoleAttributeDescriptionSchema:
+      examples: []
+      properties:
+        detail:
+          examples:
+          - IhEVjsekkeZUyMKBwICn
+          type: string
+        error:
+          $ref: '#/components/schemas/ErrorFieldRoleAttributeDescriptionSchema'
+      required:
+      - detail
+      - error
+      title: ErrorSchemaRoleAttributeDescriptionSchema
+      type: object
+    ErrorSchemaRoleAttributeDescriptionSchemaNone:
+      examples: []
+      properties:
+        detail:
+          examples:
+          - QnZCSkPGeNNtndFpmxgI
+          type: string
+        error:
+          $ref: '#/components/schemas/ErrorFieldRoleAttributeDescriptionSchemaNone'
+      required:
+      - detail
+      - error
+      title: ErrorSchemaUnionRoleAttributeDescriptionSchema,NoneType
+      type: object
+    GroupNewSchema:
+      properties:
+        name:
+          oneOf:
+          - type: string
+          - type: 'null'
+        uuid:
+          oneOf:
+          - format: uuid
+            type: string
+          - type: 'null'
+      required: []
+      title: GroupNewSchema
+      type: object
+    GroupRoleFullInfoSchema:
+      properties:
+        createdAt:
+          format: date-time
+          type: string
+        name:
+          type: string
+        role:
+          oneOf:
+          - $ref: '#/components/schemas/RoleNameConstants'
+          - type: 'null'
+        type:
+          $ref: '#/components/schemas/GroupType'
+        uuid:
+          type: string
+      required:
+      - createdAt
+      - name
+      - type
+      - uuid
+      title: GroupRoleFullInfoSchema
+      type: object
+    GroupRoleInfoSchema:
+      properties:
+        name:
+          type: string
+        role:
+          oneOf:
+          - $ref: '#/components/schemas/RoleNameConstants'
+          - type: 'null'
+        type:
+          $ref: '#/components/schemas/GroupType'
+        uuid:
+          type: string
+      required:
+      - name
+      - type
+      - uuid
+      title: GroupRoleInfoSchema
+      type: object
+    GroupRolePermissionsSchema:
+      properties:
+        name:
+          oneOf:
+          - $ref: '#/components/schemas/RoleNameConstants'
+          - type: 'null'
+        permissions:
+          items:
+            type: string
+          type: array
+      required:
+      - name
+      - permissions
+      title: GroupRolePermissionsSchema
+      type: object
+    GroupShortInfoSchema:
+      properties:
+        name:
+          type: string
+        uuid:
+          type: string
+      required:
+      - name
+      - uuid
+      title: GroupShortInfoSchema
+      type: object
+    GroupType:
+      enum:
+      - product
+      - user
+      - personal
+      title: GroupType
+      type: string
+    HTMLAutoFormInfoSchema:
+      properties:
+        formUrl:
+          type: string
+        successString:
+          type: string
+        successUrl:
+          oneOf:
+          - type: string
+          - type: 'null'
+        username:
+          type: string
+      required:
+      - formUrl
+      - successString
+      - username
+      title: HTMLAutoFormInfoSchema
+      type: object
+    HTMLAutoFormSchema:
+      properties:
+        formUrl:
+          minLength: 1
+          type: string
+        password:
+          minLength: 1
+          type: string
+        successString:
+          minLength: 3
+          type: string
+        successUrl:
+          oneOf:
+          - type: string
+          - type: 'null'
+        username:
+          minLength: 1
+          type: string
+      required:
+      - formUrl
+      - password
+      - successString
+      - username
+      title: HTMLAutoFormSchema
+      type: object
+    HTMLFormBasedInfoSchema:
+      properties:
+        formUrl:
+          type: string
+        formXPath:
+          type: string
+        passwordField:
+          type: string
+        regexpOfSuccess:
+          type: string
+        submitValue:
+          oneOf:
+          - type: string
+          - type: 'null'
+        successUrl:
+          oneOf:
+          - type: string
+          - type: 'null'
+        usernameField:
+          type: string
+        usernameValue:
+          type: string
+      required:
+      - formUrl
+      - formXPath
+      - passwordField
+      - regexpOfSuccess
+      - usernameField
+      - usernameValue
+      title: HTMLFormBasedInfoSchema
+      type: object
+    HTMLFormBasedSchema:
+      properties:
+        formUrl:
+          minLength: 1
+          type: string
+        formXPath:
+          minLength: 1
+          type: string
+        passwordField:
+          minLength: 1
+          type: string
+        passwordValue:
+          minLength: 1
+          type: string
+        regexpOfSuccess:
+          minLength: 3
+          type: string
+        submitValue:
+          oneOf:
+          - type: string
+          - type: 'null'
+        successUrl:
+          oneOf:
+          - type: string
+          - type: 'null'
+        usernameField:
+          minLength: 1
+          type: string
+        usernameValue:
+          minLength: 1
+          type: string
+      required:
+      - formUrl
+      - formXPath
+      - passwordField
+      - passwordValue
+      - regexpOfSuccess
+      - usernameField
+      - usernameValue
+      title: HTMLFormBasedSchema
+      type: object
+    HTTPBasicInfoSchema:
+      properties:
+        testString:
+          oneOf:
+          - type: string
+          - type: 'null'
+        username:
+          type: string
+      required:
+      - username
+      title: HTTPBasicInfoSchema
+      type: object
+    HTTPBasicSchema:
+      properties:
+        password:
+          minLength: 1
+          type: string
+        testString:
+          oneOf:
+          - type: string
+          - type: 'null'
+        username:
+          minLength: 1
+          type: string
+      required:
+      - password
+      - username
+      title: HTTPBasicSchema
+      type: object
+    HeaderSchema:
+      properties:
+        name:
+          minLength: 1
+          type: string
+        value:
+          minLength: 1
+          type: string
+      required:
+      - name
+      - value
+      title: HeaderSchema
+      type: object
+    InvalidModules:
+      examples:
+      - invalidModules:
+        - nwuwZqSRqubKziUxmyim
+      properties:
+        invalidModules:
+          examples:
+          - - FwbFWILdFWoqnFrSJCNk
+          items:
+            examples:
+            - iCQhLofQdvIKNfgpRUvo
+            type: string
+          type: array
+      required:
+      - invalidModules
+      title: InvalidModules
+      type: object
+    NewAPIProfileSchema:
+      properties:
+        apiSchemas:
+          items:
+            format: uuid
+            type: string
+          type: array
+        groupUUID:
+          format: uuid
+          type: string
+        name:
+          type: string
+      required:
+      - apiSchemas
+      - groupUUID
+      - name
+      title: NewAPIProfileSchema
+      type: object
+    NewAPISchemaFileSchema:
+      properties:
+        file:
+          contentMediaType: application/octet-stream
+          format: binary
+          type: string
+        groupUUID:
+          format: uuid
+          type: string
+      required:
+      - file
+      - groupUUID
+      title: NewAPISchemaFileSchema
+      type: object
+    NewAPISchemaSchema:
+      properties:
+        fileUuid:
+          oneOf:
+          - format: uuid
+            type: string
+          - type: 'null'
+        groupUUID:
+          format: uuid
+          type: string
+        harOptions:
+          oneOf:
+          - $ref: '#/components/schemas/APISchemaHAROptionsSchema'
+          - type: 'null'
+        link:
+          oneOf:
+          - type: string
+          - type: 'null'
+        name:
+          oneOf:
+          - type: string
+          - type: 'null'
+        openapiOptions:
+          oneOf:
+          - $ref: '#/components/schemas/APISchemaOpenAPIOptionsSchema'
+          - type: 'null'
+        type:
+          $ref: '#/components/schemas/APISchemaTypes'
+      required:
+      - groupUUID
+      - type
+      title: NewAPISchemaSchema
+      type: object
+    PaginationSchemaVulnInGroupSchema:
+      properties:
+        currentPage:
+          type: integer
+        items:
+          items:
+            oneOf:
+            - $ref: '#/components/schemas/VulnWESchema'
+            - $ref: '#/components/schemas/VulnCVESchema'
+            - $ref: '#/components/schemas/VulnErrorPageSchema'
+            - $ref: '#/components/schemas/VulnTrendingSchema'
+          type: array
+        totalCount:
+          type: integer
+        totalItems:
+          type: integer
+      required:
+      - currentPage
+      - items
+      - totalCount
+      - totalItems
+      title: PaginationSchemaVulnInGroupSchema
+      type: object
+    PaginationSchemaVulnPerimeterSchema:
+      properties:
+        currentPage:
+          type: integer
+        items:
+          items:
+            $ref: '#/components/schemas/VulnPerimeterSchema'
+          type: array
+        totalCount:
+          type: integer
+        totalItems:
+          type: integer
+      required:
+      - currentPage
+      - items
+      - totalCount
+      - totalItems
+      title: PaginationSchemaVulnPerimeterSchema
+      type: object
+    ProfileCloneSchema:
+      properties:
+        groupUUID:
+          oneOf:
+          - format: uuid
+            type: string
+          - type: 'null'
+      required: []
+      title: ProfileCloneSchema
+      type: object
+    ProfileCreateSchema:
+      properties:
+        baseProfileUUID:
+          format: uuid
+          type: string
+        groupUUID:
+          format: uuid
+          type: string
+        name:
+          maxLength: 50
+          type: string
+        params:
+          $ref: '#/components/schemas/ProfileParamsSchema'
+      required:
+      - baseProfileUUID
+      - groupUUID
+      - name
+      - params
+      title: ProfileCreateSchema
+      type: object
+    ProfileFullInfoSchema:
+      properties:
+        group:
+          $ref: '#/components/schemas/GroupShortInfoSchema'
+        isDeleted:
+          type: boolean
+        name:
+          type: string
+        params:
+          $ref: '#/components/schemas/ProfileParamsSchema'
+        type:
+          $ref: '#/components/schemas/ProfileType'
+        uuid:
+          format: uuid
+          type: string
+      required:
+      - group
+      - isDeleted
+      - name
+      - params
+      - type
+      - uuid
+      title: ProfileFullInfoSchema
+      type: object
+    ProfileParamsSchema:
+      properties:
+        blacklist:
+          oneOf:
+          - items:
+              $ref: '#/components/schemas/ValidationSchema'
+            type: array
+          - type: 'null'
+        crawlingType:
+          oneOf:
+          - $ref: '#/components/schemas/CrawlingType'
+          - type: 'null'
+        customHeaders:
+          oneOf:
+          - items:
+              $ref: '#/components/schemas/HeaderSchema'
+            type: array
+          - type: 'null'
+        delayBetweenRequests:
+          oneOf:
+          - type: number
+          - type: 'null'
+        modules:
+          oneOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+        proxy:
+          oneOf:
+          - $ref: '#/components/schemas/ProxySchema'
+          - type: 'null'
+        raw:
+          oneOf:
+          - type: object
+          - type: 'null'
+        scanScope:
+          oneOf:
+          - $ref: '#/components/schemas/ScanScope'
+          - type: 'null'
+        whitelist:
+          oneOf:
+          - items:
+              $ref: '#/components/schemas/ValidationSchema'
+            type: array
+          - type: 'null'
+        workers:
+          oneOf:
+          - type: integer
+          - type: 'null'
+      required: []
+      title: ProfileParamsSchema
+      type: object
+    ProfileShortInfoSchema:
+      properties:
+        group:
+          oneOf:
+          - $ref: '#/components/schemas/GroupShortInfoSchema'
+          - type: 'null'
+        isDeleted:
+          type: boolean
+        name:
+          type: string
+        type:
+          $ref: '#/components/schemas/ProfileType'
+        uuid:
+          type: string
+      required:
+      - group
+      - isDeleted
+      - name
+      - type
+      - uuid
+      title: ProfileShortInfoSchema
+      type: object
+    ProfileType:
+      enum:
+      - fast
+      - full
+      - optimal
+      - authcheck
+      - custom
+      - system
+      title: ProfileType
+      type: string
+    ProfileUpdateSchema:
+      properties:
+        name:
+          oneOf:
+          - type: string
+          - type: 'null'
+        params:
+          oneOf:
+          - $ref: '#/components/schemas/ProfileParamsSchema'
+          - type: 'null'
+      required: []
+      title: ProfileUpdateSchema
+      type: object
+    ProfilesConflicts:
+      examples:
+      - sites:
+        - dYhLnYSBmewrlWGgyqPD
+      properties:
+        sites:
+          examples:
+          - - PJfvSvPROLrARwDcwziu
+          items:
+            examples:
+            - uHUplpaRjanyUsSWZEIC
+            type: string
+          type: array
+      required:
+      - sites
+      title: ProfilesConflicts
+      type: object
+    ProxyAuthSchema:
+      properties:
+        password:
+          type: string
+        username:
+          type: string
+      required:
+      - password
+      - username
+      title: ProxyAuthSchema
+      type: object
+    ProxySchema:
+      properties:
+        auth:
+          oneOf:
+          - $ref: '#/components/schemas/ProxyAuthSchema'
+          - type: 'null'
+        host:
+          maxLength: 255
+          minLength: 1
+          type: string
+        port:
+          maximum: 65535.0
+          minimum: 0.0
+          type: integer
+        type:
+          $ref: '#/components/schemas/ProxyType'
+      required:
+      - host
+      - port
+      - type
+      title: ProxySchema
+      type: object
+    ProxyType:
+      enum:
+      - http
+      - https
+      - http_no_connect
+      - socks4
+      - socks5
+      - socks5h
+      - transparent
+      title: ProxyType
+      type: string
+    RawCookieInfoSchema:
+      properties:
+        cookies:
+          items:
+            type: string
+          type: array
+        regexpOfSuccess:
+          type: string
+        successUrl:
+          type: string
+      required:
+      - cookies
+      - regexpOfSuccess
+      - successUrl
+      title: RawCookieInfoSchema
+      type: object
+    RawCookieSchema:
+      properties:
+        cookies:
+          items:
+            type: string
+          type: array
+        regexpOfSuccess:
+          minLength: 3
+          type: string
+        successUrl:
+          minLength: 1
+          type: string
+      required:
+      - cookies
+      - regexpOfSuccess
+      - successUrl
+      title: RawCookieSchema
+      type: object
+    ReportLangEnum:
+      enum:
+      - ru
+      - en
+      title: ReportLangEnum
+      type: string
+    RequestFullScanStatus:
+      enum:
+      - pending
+      - accepted
+      - rejected
+      title: RequestFullScanStatus
+      type: string
+    RoleAttributeDescriptionSchema:
+      examples:
+      - limits: vmoGjgxiHQOyswaLrqex
+        permissions: EuTJmBVBFdzxuvECziwY
+      properties:
+        limits:
+          examples:
+          - JIgNZYFcagWptUqCwdER
+          type: string
+        permissions:
+          examples:
+          - ilvbzQIBShDtFfOfiPXw
+          type: string
+      required: []
+      title: RoleAttributeDescriptionSchema
+      type: object
+    RoleNameConstants:
+      enum:
+      - basic_api_token
+      - service_api_token
+      - admin
+      - manager
+      - guest
+      - basic_unregistered_user
+      - basic_unverified_user
+      - basic_verified_user
+      - moderator
+      - operator
+      - auditor
+      title: RoleNameConstants
+      type: string
+    RolesListSchema:
+      properties:
+        roles:
+          items:
+            $ref: '#/components/schemas/RoleNameConstants'
+          type: array
+      required:
+      - roles
+      title: RolesListSchema
+      type: object
+    ScanQueueProfilesSchema:
+      properties:
+        apiProfile:
+          oneOf:
+          - $ref: '#/components/schemas/APIProfileShortInfoSchema'
+          - type: 'null'
+        authStatus:
+          $ref: '#/components/schemas/AuthDataStatus'
+        authentication:
+          oneOf:
+          - $ref: '#/components/schemas/AuthSettingsInfoSchema'
+          - type: 'null'
+        createdAt:
+          format: date-time
+          type: string
+        duration:
+          type: number
+        errorReason:
+          oneOf:
+          - type: string
+          - type: 'null'
+        finishedAt:
+          oneOf:
+          - format: date-time
+            type: string
+          - type: 'null'
+        kbVersion:
+          oneOf:
+          - type: string
+          - type: 'null'
+        perimeterScan:
+          $ref: '#/components/schemas/VulnPerimeterInfoSchema'
+        profile:
+          $ref: '#/components/schemas/ProfileShortInfoSchema'
+        progress:
+          type: integer
+        queuePosition:
+          oneOf:
+          - type: integer
+          - type: 'null'
+        score:
+          oneOf:
+          - type: number
+          - type: 'null'
+        startedAt:
+          oneOf:
+          - format: date-time
+            type: string
+          - type: 'null'
+        status:
+          $ref: '#/components/schemas/ScanStatus'
+        uuid:
+          type: string
+        vulnStats:
+          $ref: '#/components/schemas/VulnerabilitiesSchema'
+      required:
+      - apiProfile
+      - authStatus
+      - authentication
+      - createdAt
+      - duration
+      - errorReason
+      - finishedAt
+      - kbVersion
+      - perimeterScan
+      - profile
+      - progress
+      - queuePosition
+      - score
+      - startedAt
+      - status
+      - uuid
+      - vulnStats
+      title: ScanQueueProfilesSchema
+      type: object
+    ScanScope:
+      enum:
+      - domain
+      - folder
+      - path
+      - base_domain
+      - subdomain
+      title: ScanScope
+      type: string
+    ScanStatus:
+      enum:
+      - created
+      - sent_start_task
+      - started
+      - sent_stop_task
+      - stopped
+      - finished
+      title: ScanStatus
+      type: string
+    Severity:
+      enum:
+      - high
+      - medium
+      - low
+      - info
+      title: Severity
+      type: string
+    SharedLinkCreateSchema:
+      properties:
+        emails:
+          oneOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+        ttl:
+          oneOf:
+          - $ref: '#/components/schemas/SharedLinkTTL'
+          - type: 'null'
+      required: []
+      title: SharedLinkCreateSchema
+      type: object
+    SharedLinkSchema:
+      properties:
+        emails:
+          oneOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+        uuid:
+          type: string
+        validTo:
+          oneOf:
+          - format: date-time
+            type: string
+          - type: 'null'
+      required:
+      - emails
+      - uuid
+      - validTo
+      title: SharedLinkSchema
+      type: object
+    SharedLinkTTL:
+      enum:
+      - 3
+      - 24
+      - 168
+      - 720
+      - 4320
+      title: SharedLinkTTL
+      type: integer
+    SiteCreateSchema:
+      properties:
+        apiProfileUUID:
+          oneOf:
+          - format: uuid
+            type: string
+          - type: 'null'
+        authenticationUUID:
+          oneOf:
+          - format: uuid
+            type: string
+          - type: 'null'
+        groupUUID:
+          format: uuid
+          type: string
+        name:
+          oneOf:
+          - type: string
+          - type: 'null'
+        profileUUID:
+          oneOf:
+          - format: uuid
+            type: string
+          - type: 'null'
+        url:
+          maxLength: 255
+          type: string
+      required:
+      - groupUUID
+      - url
+      title: SiteCreateSchema
+      type: object
+    SiteSchema:
+      properties:
+        apiProfile:
+          oneOf:
+          - $ref: '#/components/schemas/APIProfileShortInfoSchema'
+          - type: 'null'
+        authStatus:
+          $ref: '#/components/schemas/AuthDataStatus'
+        authentication:
+          oneOf:
+          - $ref: '#/components/schemas/AuthSettingsInfoSchema'
+          - type: 'null'
+        createdAt:
+          format: date-time
+          type: string
+        group:
+          $ref: '#/components/schemas/GroupShortInfoSchema'
+        lastScan:
+          oneOf:
+          - $ref: '#/components/schemas/ScanQueueProfilesSchema'
+          - type: 'null'
+        name:
+          type: string
+        profile:
+          $ref: '#/components/schemas/ProfileShortInfoSchema'
+        requestFullScanStatus:
+          oneOf:
+          - $ref: '#/components/schemas/RequestFullScanStatus'
+          - type: 'null'
+        url:
+          type: string
+        uuid:
+          format: uuid
+          type: string
+        verified:
+          type: boolean
+      required:
+      - apiProfile
+      - authStatus
+      - authentication
+      - createdAt
+      - group
+      - lastScan
+      - name
+      - profile
+      - requestFullScanStatus
+      - url
+      - uuid
+      - verified
+      title: SiteSchema
+      type: object
+    SiteSetSettingsSchema:
+      properties:
+        apiProfileUUID:
+          oneOf:
+          - format: uuid
+            type: string
+          - type: 'null'
+        authenticationUUID:
+          oneOf:
+          - format: uuid
+            type: string
+          - type: 'null'
+        name:
+          oneOf:
+          - type: string
+          - type: 'null'
+        profileUUID:
+          oneOf:
+          - format: uuid
+            type: string
+          - type: 'null'
+        url:
+          oneOf:
+          - type: string
+          - type: 'null'
+      required: []
+      title: SiteSetSettingsSchema
+      type: object
+    SiteSettingsInfoSchema:
+      properties:
+        apiProfile:
+          oneOf:
+          - $ref: '#/components/schemas/APIProfileShortInfoSchema'
+          - type: 'null'
+        authentication:
+          oneOf:
+          - $ref: '#/components/schemas/AuthSettingsInfoSchema'
+          - type: 'null'
+        name:
+          type: string
+        profile:
+          $ref: '#/components/schemas/ProfileShortInfoSchema'
+        url:
+          type: string
+      required:
+      - apiProfile
+      - authentication
+      - name
+      - profile
+      - url
+      title: SiteSettingsInfoSchema
+      type: object
+    TemplateName:
+      enum:
+      - nist
+      - oud4
+      - owasp
+      - owasp_mobile
+      - pcidss
+      - plain
+      - sans
+      title: TemplateName
+      type: string
+    UpdateAPIProfileSchema:
+      properties:
+        apiSchemas:
+          oneOf:
+          - items:
+              format: uuid
+              type: string
+            type: array
+          - type: 'null'
+        name:
+          oneOf:
+          - type: string
+          - type: 'null'
+      required: []
+      title: UpdateAPIProfileSchema
+      type: object
+    UserRoleSchema:
+      properties:
+        role:
+          oneOf:
+          - $ref: '#/components/schemas/RoleNameConstants'
+          - type: 'null'
+        uuid:
+          format: uuid
+          type: string
+      required:
+      - uuid
+      title: UserRoleSchema
+      type: object
+    UserUUIDSchema:
+      properties:
+        user_uuid:
+          format: uuid
+          type: string
+      required:
+      - user_uuid
+      title: UserUUIDSchema
+      type: object
+    ValidationSchema:
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationType'
+        value:
+          type: string
+      required:
+      - type
+      - value
+      title: ValidationSchema
+      type: object
+    ValidationType:
+      enum:
+      - wildcard
+      - regexp
+      - string
+      title: ValidationType
+      type: string
+    VulnAppSchema:
+      properties:
+        name:
+          type: string
+        software:
+          oneOf:
+          - type: string
+          - type: 'null'
+        type:
+          oneOf:
+          - type: string
+          - type: 'null'
+        url:
+          type: string
+        vendor:
+          oneOf:
+          - type: string
+          - type: 'null'
+        version:
+          oneOf:
+          - type: string
+          - type: 'null'
+      required:
+      - name
+      - software
+      - type
+      - url
+      - vendor
+      - version
+      title: VulnAppSchema
+      type: object
+    VulnAppsSchema:
+      properties:
+        apps:
+          items:
+            $ref: '#/components/schemas/VulnAppSchema'
+          type: array
+        type:
+          const: apps
+          type: string
+      required:
+      - apps
+      - type
+      title: VulnAppsSchema
+      type: object
+    VulnCVEApprovedSchema:
+      properties:
+        cveId:
+          type: string
+        cvss:
+          type: number
+        cvssVector:
+          type: string
+        matches:
+          oneOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+        requestRaw:
+          oneOf:
+          - type: string
+          - type: 'null'
+        responseRaw:
+          oneOf:
+          - type: string
+          - type: 'null'
+        title:
+          type: string
+        type:
+          const: cve_approved
+          type: string
+      required:
+      - cveId
+      - cvss
+      - cvssVector
+      - matches
+      - requestRaw
+      - responseRaw
+      - title
+      - type
+      title: VulnCVEApprovedSchema
+      type: object
+    VulnCVESchema:
+      properties:
+        cveId:
+          type: string
+        cvss:
+          type: number
+        cvssVector:
+          type: string
+        title:
+          type: string
+        type:
+          const: cve
+          type: string
+        uuid:
+          type: string
+      required:
+      - cveId
+      - cvss
+      - cvssVector
+      - title
+      - type
+      - uuid
+      title: VulnCVESchema
+      type: object
+    VulnCategoryName:
+      enum:
+      - sensitive_data
+      - security_headers
+      - access_control
+      - cryptography
+      - injection
+      - insecure_design
+      - security_misconfiguration
+      - cve
+      - tech_info
+      - trending
+      title: VulnCategoryName
+      type: string
+    VulnErrorPageSchema:
+      properties:
+        code:
+          type: integer
+        request:
+          type: object
+        response:
+          oneOf:
+          - type: object
+          - type: 'null'
+        type:
+          const: error_page
+          type: string
+        url:
+          type: string
+        uuid:
+          type: string
+      required:
+      - code
+      - request
+      - response
+      - type
+      - url
+      - uuid
+      title: VulnErrorPageSchema
+      type: object
+    VulnGroupSchema:
+      properties:
+        categoryLocaleKey:
+          $ref: '#/components/schemas/VulnCategoryName'
+        count:
+          type: integer
+        groupTitle:
+          type: string
+        issueType:
+          $ref: '#/components/schemas/VulnerabilityIssue'
+        requestKey:
+          oneOf:
+          - type: string
+          - type: 'null'
+        severity:
+          $ref: '#/components/schemas/Severity'
+        suspicionCount:
+          default: 0
+          type: integer
+        vulnerability:
+          oneOf:
+          - $ref: '#/components/schemas/VulnAppsSchema'
+          - $ref: '#/components/schemas/VulnCVESchema'
+          - $ref: '#/components/schemas/VulnCVEApprovedSchema'
+          - $ref: '#/components/schemas/VulnErrorPageSchema'
+          - $ref: '#/components/schemas/VulnTrendingSchema'
+          - $ref: '#/components/schemas/VulnWESchema'
+      required:
+      - categoryLocaleKey
+      - count
+      - groupTitle
+      - issueType
+      - requestKey
+      - severity
+      - vulnerability
+      title: VulnGroupSchema
+      type: object
+    VulnMatchesSchema:
+      properties:
+        foundData:
+          items:
+            type: string
+          type: array
+      required:
+      - foundData
+      title: VulnMatchesSchema
+      type: object
+    VulnPerimeterInfoSchema:
+      properties:
+        enabled:
+          type: boolean
+        portsCount:
+          type: integer
+      required:
+      - enabled
+      - portsCount
+      title: VulnPerimeterInfoSchema
+      type: object
+    VulnPerimeterSchema:
+      properties:
+        ports:
+          items:
+            $ref: '#/components/schemas/VulnPortSchema'
+          type: array
+        subdomain:
+          type: string
+      required:
+      - ports
+      - subdomain
+      title: VulnPerimeterSchema
+      type: object
+    VulnPortSchema:
+      properties:
+        description:
+          type: string
+        ip:
+          type: string
+        port:
+          type: integer
+        severity:
+          $ref: '#/components/schemas/Severity'
+      required:
+      - description
+      - ip
+      - port
+      - severity
+      title: VulnPortSchema
+      type: object
+    VulnTemplateClassificationSchema:
+      properties:
+        cveId:
+          oneOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+        cvssMetrics:
+          oneOf:
+          - type: string
+          - type: 'null'
+        cvssScore:
+          oneOf:
+          - type: number
+          - type: 'null'
+        cweId:
+          oneOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+        epssPercentile:
+          oneOf:
+          - type: number
+          - type: 'null'
+        epssScore:
+          oneOf:
+          - type: number
+          - type: 'null'
+      required:
+      - cveId
+      - cvssMetrics
+      - cvssScore
+      - cweId
+      - epssPercentile
+      - epssScore
+      title: VulnTemplateClassificationSchema
+      type: object
+    VulnTemplateInfoSchema:
+      properties:
+        classification:
+          oneOf:
+          - $ref: '#/components/schemas/VulnTemplateClassificationSchema'
+          - type: 'null'
+        description:
+          oneOf:
+          - type: string
+          - type: 'null'
+        impact:
+          oneOf:
+          - type: string
+          - type: 'null'
+        name:
+          type: string
+        reference:
+          oneOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+        remediation:
+          oneOf:
+          - type: string
+          - type: 'null'
+      required:
+      - classification
+      - description
+      - impact
+      - name
+      - reference
+      - remediation
+      title: VulnTemplateInfoSchema
+      type: object
+    VulnTrendingSchema:
+      properties:
+        createdAt:
+          format: date-time
+          type: string
+        requestRaw:
+          type: string
+        responseRaw:
+          type: string
+        severity:
+          $ref: '#/components/schemas/Severity'
+        templateId:
+          type: string
+        templateInfo:
+          $ref: '#/components/schemas/VulnTemplateInfoSchema'
+        type:
+          const: trending
+          type: string
+        urlFull:
+          type: string
+        uuid:
+          type: string
+      required:
+      - createdAt
+      - requestRaw
+      - responseRaw
+      - severity
+      - templateId
+      - templateInfo
+      - type
+      - urlFull
+      - uuid
+      title: VulnTrendingSchema
+      type: object
+    VulnWESchema:
+      properties:
+        channel:
+          oneOf:
+          - $ref: '#/components/schemas/ChannelSchema'
+          - type: 'null'
+        confidence:
+          $ref: '#/components/schemas/VulnerabilityConfidenceLevels'
+        createdAt:
+          format: date-time
+          type: string
+        falsePositive:
+          type: boolean
+        fixed:
+          type: boolean
+        matches:
+          oneOf:
+          - $ref: '#/components/schemas/VulnMatchesSchema'
+          - type: 'null'
+        requestRaw:
+          oneOf:
+          - type: string
+          - type: 'null'
+        responseRaw:
+          oneOf:
+          - type: string
+          - type: 'null'
+        responseTime:
+          type: number
+        severity:
+          $ref: '#/components/schemas/Severity'
+        starred:
+          type: boolean
+        type:
+          const: issue
+          type: string
+        urlFull:
+          oneOf:
+          - type: string
+          - type: 'null'
+        urlRel:
+          type: string
+        uuid:
+          type: string
+        vector:
+          oneOf:
+          - type: string
+          - type: 'null'
+      required:
+      - channel
+      - confidence
+      - createdAt
+      - falsePositive
+      - fixed
+      - matches
+      - requestRaw
+      - responseRaw
+      - responseTime
+      - severity
+      - starred
+      - type
+      - urlFull
+      - urlRel
+      - uuid
+      - vector
+      title: VulnWESchema
+      type: object
+    VulnerabilitiesSchema:
+      properties:
+        high:
+          $ref: '#/components/schemas/VulnerabilityStatSchema'
+        info:
+          $ref: '#/components/schemas/VulnerabilityStatSchema'
+        low:
+          $ref: '#/components/schemas/VulnerabilityStatSchema'
+        medium:
+          $ref: '#/components/schemas/VulnerabilityStatSchema'
+      required:
+      - high
+      - info
+      - low
+      - medium
+      title: VulnerabilitiesSchema
+      type: object
+    VulnerabilityConfidenceLevels:
+      enum:
+      - vuln
+      - suspicion
+      title: VulnerabilityConfidenceLevels
+      type: string
+    VulnerabilityIssue:
+      enum:
+      - apps
+      - cve
+      - error_page
+      - trending
+      - issue
+      title: VulnerabilityIssue
+      type: string
+    VulnerabilityStatSchema:
+      properties:
+        fixed:
+          type: integer
+        real:
+          type: integer
+      required:
+      - fixed
+      - real
+      title: VulnerabilityStatSchema
+      type: object
+info:
+  title: PTBBS API
+  version: 1.0.0
+openapi: 3.0.0
+paths:
+  /api/v1/api-profiles:
+    get:
+      deprecated: false
+      operationId: ApiV1ApiProfilesGetAll
+      parameters:
+      - deprecated: false
+        in: header
+        name: authorization
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/APIProfileShortInfoSchema'
+                type: array
+          description: Request fulfilled, document follows
+          headers: {}
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Validation Exception
+                examples:
+                - detail: Bad Request
+                  extra: {}
+                  status_code: 400
+                properties:
+                  detail:
+                    type: string
+                  extra:
+                    additionalProperties: {}
+                    type:
+                    - 'null'
+                    - object
+                    - array
+                  status_code:
+                    type: integer
+                required:
+                - detail
+                - status_code
+                type: object
+          description: Bad request syntax or unsupported method
+      summary: GetAll
+      tags:
+      - v1-api-profile
+    post:
+      deprecated: false
+      operationId: ApiV1ApiProfilesCreate
+      parameters:
+      - deprecated: false
+        in: header
+        name: authorization
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewAPIProfileSchema'
+        required: true
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIProfileShortInfoSchema'
+          description: Created
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Validation Exception
+                examples:
+                - detail: Bad Request
+                  extra: {}
+                  status_code: 400
+                properties:
+                  detail:
+                    type: string
+                  extra:
+                    additionalProperties: {}
+                    type:
+                    - 'null'
+                    - object
+                    - array
+                  status_code:
+                    type: integer
+                required:
+                - detail
+                - status_code
+                type: object
+          description: Bad request syntax or unsupported method
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaRoleAttributeDescriptionSchema'
+          description: Forbidden
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaNoneType'
+          description: Invalid data
+      summary: Create
+      tags:
+      - v1-api-profile
+  /api/v1/api-profiles/schema:
+    post:
+      deprecated: false
+      operationId: ApiV1ApiProfilesSchemaCreateSchema
+      parameters:
+      - deprecated: false
+        in: header
+        name: authorization
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewAPISchemaSchema'
+        required: true
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APISchemaShortSchema'
+          description: Created
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Validation Exception
+                examples:
+                - detail: Bad Request
+                  extra: {}
+                  status_code: 400
+                properties:
+                  detail:
+                    type: string
+                  extra:
+                    additionalProperties: {}
+                    type:
+                    - 'null'
+                    - object
+                    - array
+                  status_code:
+                    type: integer
+                required:
+                - detail
+                - status_code
+                type: object
+          description: Bad request syntax or unsupported method
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaRoleAttributeDescriptionSchema'
+          description: Forbidden
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaNoneType'
+          description: Invalid data
+      summary: CreateSchema
+      tags:
+      - v1-api-profile
+  /api/v1/api-profiles/schema/file:
+    post:
+      deprecated: false
+      operationId: ApiV1ApiProfilesSchemaFileCreateSchemaFile
+      parameters:
+      - deprecated: false
+        in: header
+        name: authorization
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/NewAPISchemaFileSchema'
+        required: true
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APISchemaFileShortInfo'
+          description: Created
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Validation Exception
+                examples:
+                - detail: Bad Request
+                  extra: {}
+                  status_code: 400
+                properties:
+                  detail:
+                    type: string
+                  extra:
+                    additionalProperties: {}
+                    type:
+                    - 'null'
+                    - object
+                    - array
+                  status_code:
+                    type: integer
+                required:
+                - detail
+                - status_code
+                type: object
+          description: Bad request syntax or unsupported method
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaRoleAttributeDescriptionSchema'
+          description: Forbidden
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaNoneType'
+          description: Invalid data
+      summary: CreateSchemaFile
+      tags:
+      - v1-api-profile
+  /api/v1/api-profiles/schema/{schema_uuid}:
+    get:
+      deprecated: false
+      operationId: ApiV1ApiProfilesSchemaSchemaUuidGetSchema
+      parameters:
+      - deprecated: false
+        in: path
+        name: schema_uuid
+        required: true
+        schema:
+          format: uuid
+          type: string
+      - deprecated: false
+        in: header
+        name: authorization
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APISchemaFullSchema'
+          description: Request fulfilled, document follows
+          headers: {}
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Validation Exception
+                examples:
+                - detail: Bad Request
+                  extra: {}
+                  status_code: 400
+                properties:
+                  detail:
+                    type: string
+                  extra:
+                    additionalProperties: {}
+                    type:
+                    - 'null'
+                    - object
+                    - array
+                  status_code:
+                    type: integer
+                required:
+                - detail
+                - status_code
+                type: object
+          description: Bad request syntax or unsupported method
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaNoneType'
+          description: Not found
+      summary: GetSchema
+      tags:
+      - v1-api-profile
+  /api/v1/api-profiles/{profile_uuid}:
+    delete:
+      deprecated: false
+      operationId: ApiV1ApiProfilesProfileUuidDelete
+      parameters:
+      - deprecated: false
+        in: path
+        name: profile_uuid
+        required: true
+        schema:
+          format: uuid
+          type: string
+      - deprecated: false
+        in: header
+        name: authorization
+        required: true
+        schema:
+          type: string
+      responses:
+        '204':
+          description: Deleted
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Validation Exception
+                examples:
+                - detail: Bad Request
+                  extra: {}
+                  status_code: 400
+                properties:
+                  detail:
+                    type: string
+                  extra:
+                    additionalProperties: {}
+                    type:
+                    - 'null'
+                    - object
+                    - array
+                  status_code:
+                    type: integer
+                required:
+                - detail
+                - status_code
+                type: object
+          description: Bad request syntax or unsupported method
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaRoleAttributeDescriptionSchema'
+          description: Forbidden
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaAPIProfilesConflicts'
+          description: Conflict
+      summary: Delete
+      tags:
+      - v1-api-profile
+    get:
+      deprecated: false
+      operationId: ApiV1ApiProfilesProfileUuidGet
+      parameters:
+      - deprecated: false
+        in: path
+        name: profile_uuid
+        required: true
+        schema:
+          format: uuid
+          type: string
+      - deprecated: false
+        in: header
+        name: authorization
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIProfileSchema'
+          description: Request fulfilled, document follows
+          headers: {}
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Validation Exception
+                examples:
+                - detail: Bad Request
+                  extra: {}
+                  status_code: 400
+                properties:
+                  detail:
+                    type: string
+                  extra:
+                    additionalProperties: {}
+                    type:
+                    - 'null'
+                    - object
+                    - array
+                  status_code:
+                    type: integer
+                required:
+                - detail
+                - status_code
+                type: object
+          description: Bad request syntax or unsupported method
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaNoneType'
+          description: Not found
+      summary: Get
+      tags:
+      - v1-api-profile
+    patch:
+      deprecated: false
+      operationId: ApiV1ApiProfilesProfileUuidUpdate
+      parameters:
+      - deprecated: false
+        in: path
+        name: profile_uuid
+        required: true
+        schema:
+          format: uuid
+          type: string
+      - deprecated: false
+        in: header
+        name: authorization
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateAPIProfileSchema'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIProfileShortInfoSchema'
+          description: Updated
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Validation Exception
+                examples:
+                - detail: Bad Request
+                  extra: {}
+                  status_code: 400
+                properties:
+                  detail:
+                    type: string
+                  extra:
+                    additionalProperties: {}
+                    type:
+                    - 'null'
+                    - object
+                    - array
+                  status_code:
+                    type: integer
+                required:
+                - detail
+                - status_code
+                type: object
+          description: Bad request syntax or unsupported method
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaRoleAttributeDescriptionSchema'
+          description: Forbidden
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaNoneType'
+          description: Not found
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaNoneType'
+          description: Invalid data
+      summary: Update
+      tags:
+      - v1-api-profile
+  /api/v1/api-profiles/{profile_uuid}/clone:
+    post:
+      deprecated: false
+      operationId: ApiV1ApiProfilesProfileUuidCloneClone
+      parameters:
+      - deprecated: false
+        in: path
+        name: profile_uuid
+        required: true
+        schema:
+          format: uuid
+          type: string
+      - deprecated: false
+        in: header
+        name: authorization
+        required: true
+        schema:
+          type: string
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIProfileShortInfoSchema'
+          description: Created
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Validation Exception
+                examples:
+                - detail: Bad Request
+                  extra: {}
+                  status_code: 400
+                properties:
+                  detail:
+                    type: string
+                  extra:
+                    additionalProperties: {}
+                    type:
+                    - 'null'
+                    - object
+                    - array
+                  status_code:
+                    type: integer
+                required:
+                - detail
+                - status_code
+                type: object
+          description: Bad request syntax or unsupported method
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaRoleAttributeDescriptionSchema'
+          description: Forbidden
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaNoneType'
+          description: Not found
+      summary: Clone
+      tags:
+      - v1-api-profile
+  /api/v1/auth-chains:
+    get:
+      deprecated: false
+      operationId: ApiV1AuthChainsGetAll
+      parameters:
+      - deprecated: false
+        in: header
+        name: authorization
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/AuthChainShortInfoSchema'
+                type: array
+          description: Request fulfilled, document follows
+          headers: {}
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Validation Exception
+                examples:
+                - detail: Bad Request
+                  extra: {}
+                  status_code: 400
+                properties:
+                  detail:
+                    type: string
+                  extra:
+                    additionalProperties: {}
+                    type:
+                    - 'null'
+                    - object
+                    - array
+                  status_code:
+                    type: integer
+                required:
+                - detail
+                - status_code
+                type: object
+          description: Bad request syntax or unsupported method
+      summary: GetAll
+      tags:
+      - v1-auth-chain
+    post:
+      deprecated: false
+      operationId: ApiV1AuthChainsCreate
+      parameters:
+      - deprecated: false
+        in: header
+        name: authorization
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthChainCreateSchema'
+        required: true
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthChainShortInfoSchema'
+          description: Created
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Validation Exception
+                examples:
+                - detail: Bad Request
+                  extra: {}
+                  status_code: 400
+                properties:
+                  detail:
+                    type: string
+                  extra:
+                    additionalProperties: {}
+                    type:
+                    - 'null'
+                    - object
+                    - array
+                  status_code:
+                    type: integer
+                required:
+                - detail
+                - status_code
+                type: object
+          description: Bad request syntax or unsupported method
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaRoleAttributeDescriptionSchema'
+          description: Forbidden
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaNoneType'
+          description: Not found
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaNoneType'
+          description: Conflict
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaAuthProfilesNotFoundUUIDs'
+          description: Unprocessable Entity
+      summary: Create
+      tags:
+      - v1-auth-chain
+  /api/v1/auth-chains/{auth_chain_uuid}:
+    delete:
+      deprecated: false
+      operationId: ApiV1AuthChainsAuthChainUuidDelete
+      parameters:
+      - deprecated: false
+        in: path
+        name: auth_chain_uuid
+        required: true
+        schema:
+          format: uuid
+          type: string
+      - deprecated: false
+        in: header
+        name: authorization
+        required: true
+        schema:
+          type: string
+      responses:
+        '204':
+          description: Deleted
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Validation Exception
+                examples:
+                - detail: Bad Request
+                  extra: {}
+                  status_code: 400
+                properties:
+                  detail:
+                    type: string
+                  extra:
+                    additionalProperties: {}
+                    type:
+                    - 'null'
+                    - object
+                    - array
+                  status_code:
+                    type: integer
+                required:
+                - detail
+                - status_code
+                type: object
+          description: Bad request syntax or unsupported method
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaRoleAttributeDescriptionSchema'
+          description: Forbidden
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaAuthChainsConflicts'
+          description: Conflict
+      summary: Delete
+      tags:
+      - v1-auth-chain
+    get:
+      deprecated: false
+      operationId: ApiV1AuthChainsAuthChainUuidGet
+      parameters:
+      - deprecated: false
+        in: path
+        name: auth_chain_uuid
+        required: true
+        schema:
+          format: uuid
+          type: string
+      - deprecated: false
+        in: header
+        name: authorization
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthChainFullInfoSchema'
+          description: Request fulfilled, document follows
+          headers: {}
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Validation Exception
+                examples:
+                - detail: Bad Request
+                  extra: {}
+                  status_code: 400
+                properties:
+                  detail:
+                    type: string
+                  extra:
+                    additionalProperties: {}
+                    type:
+                    - 'null'
+                    - object
+                    - array
+                  status_code:
+                    type: integer
+                required:
+                - detail
+                - status_code
+                type: object
+          description: Bad request syntax or unsupported method
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaNoneType'
+          description: Not found
+      summary: Get
+      tags:
+      - v1-auth-chain
+    patch:
+      deprecated: false
+      operationId: ApiV1AuthChainsAuthChainUuidUpdate
+      parameters:
+      - deprecated: false
+        in: path
+        name: auth_chain_uuid
+        required: true
+        schema:
+          format: uuid
+          type: string
+      - deprecated: false
+        in: header
+        name: authorization
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthChainUpdateSchema'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthChainShortInfoSchema'
+          description: Updated
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Validation Exception
+                examples:
+                - detail: Bad Request
+                  extra: {}
+                  status_code: 400
+                properties:
+                  detail:
+                    type: string
+                  extra:
+                    additionalProperties: {}
+                    type:
+                    - 'null'
+                    - object
+                    - array
+                  status_code:
+                    type: integer
+                required:
+                - detail
+                - status_code
+                type: object
+          description: Bad request syntax or unsupported method
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaNoneType'
+          description: Forbidden
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaNoneType'
+          description: Not found
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaNoneType'
+          description: Conflict
+      summary: Update
+      tags:
+      - v1-auth-chain
+  /api/v1/auth-chains/{auth_chain_uuid}/clone:
+    post:
+      deprecated: false
+      operationId: ApiV1AuthChainsAuthChainUuidCloneClone
+      parameters:
+      - deprecated: false
+        in: path
+        name: auth_chain_uuid
+        required: true
+        schema:
+          format: uuid
+          type: string
+      - deprecated: false
+        in: header
+        name: authorization
+        required: true
+        schema:
+          type: string
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthChainShortInfoSchema'
+          description: Created
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Validation Exception
+                examples:
+                - detail: Bad Request
+                  extra: {}
+                  status_code: 400
+                properties:
+                  detail:
+                    type: string
+                  extra:
+                    additionalProperties: {}
+                    type:
+                    - 'null'
+                    - object
+                    - array
+                  status_code:
+                    type: integer
+                required:
+                - detail
+                - status_code
+                type: object
+          description: Bad request syntax or unsupported method
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaRoleAttributeDescriptionSchema'
+          description: Forbidden
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaNoneType'
+          description: Not found
+      summary: Clone
+      tags:
+      - v1-auth-chain
+  /api/v1/auth-profiles:
+    get:
+      deprecated: false
+      operationId: ApiV1AuthProfilesGetAll
+      parameters:
+      - deprecated: false
+        in: header
+        name: authorization
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/AuthProfileShortInfoSchema'
+                type: array
+          description: Request fulfilled, document follows
+          headers: {}
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Validation Exception
+                examples:
+                - detail: Bad Request
+                  extra: {}
+                  status_code: 400
+                properties:
+                  detail:
+                    type: string
+                  extra:
+                    additionalProperties: {}
+                    type:
+                    - 'null'
+                    - object
+                    - array
+                  status_code:
+                    type: integer
+                required:
+                - detail
+                - status_code
+                type: object
+          description: Bad request syntax or unsupported method
+      summary: GetAll
+      tags:
+      - v1-auth-profile
+    post:
+      deprecated: false
+      operationId: ApiV1AuthProfilesPost
+      parameters:
+      - deprecated: false
+        in: header
+        name: authorization
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthProfileCreateSchema'
+        required: true
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthProfileShortInfoSchema'
+          description: Created
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Validation Exception
+                examples:
+                - detail: Bad Request
+                  extra: {}
+                  status_code: 400
+                properties:
+                  detail:
+                    type: string
+                  extra:
+                    additionalProperties: {}
+                    type:
+                    - 'null'
+                    - object
+                    - array
+                  status_code:
+                    type: integer
+                required:
+                - detail
+                - status_code
+                type: object
+          description: Bad request syntax or unsupported method
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaRoleAttributeDescriptionSchema'
+          description: Forbidden
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaNoneType'
+          description: Unprocessable Entity
+      summary: Post
+      tags:
+      - v1-auth-profile
+  /api/v1/auth-profiles/{auth_profile_uuid}:
+    delete:
+      deprecated: false
+      operationId: ApiV1AuthProfilesAuthProfileUuidDelete
+      parameters:
+      - deprecated: false
+        in: path
+        name: auth_profile_uuid
+        required: true
+        schema:
+          format: uuid
+          type: string
+      - deprecated: false
+        in: header
+        name: authorization
+        required: true
+        schema:
+          type: string
+      responses:
+        '204':
+          description: Request fulfilled, nothing follows
+          headers: {}
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Validation Exception
+                examples:
+                - detail: Bad Request
+                  extra: {}
+                  status_code: 400
+                properties:
+                  detail:
+                    type: string
+                  extra:
+                    additionalProperties: {}
+                    type:
+                    - 'null'
+                    - object
+                    - array
+                  status_code:
+                    type: integer
+                required:
+                - detail
+                - status_code
+                type: object
+          description: Bad request syntax or unsupported method
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaRoleAttributeDescriptionSchema'
+          description: Forbidden
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaNoneType'
+          description: Not found
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaAuthProfilesConflicts'
+          description: Conflict
+      summary: Delete
+      tags:
+      - v1-auth-profile
+    get:
+      deprecated: false
+      operationId: ApiV1AuthProfilesAuthProfileUuidGet
+      parameters:
+      - deprecated: false
+        in: path
+        name: auth_profile_uuid
+        required: true
+        schema:
+          format: uuid
+          type: string
+      - deprecated: false
+        in: header
+        name: authorization
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthProfileFullInfoSchema'
+          description: Request fulfilled, document follows
+          headers: {}
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Validation Exception
+                examples:
+                - detail: Bad Request
+                  extra: {}
+                  status_code: 400
+                properties:
+                  detail:
+                    type: string
+                  extra:
+                    additionalProperties: {}
+                    type:
+                    - 'null'
+                    - object
+                    - array
+                  status_code:
+                    type: integer
+                required:
+                - detail
+                - status_code
+                type: object
+          description: Bad request syntax or unsupported method
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaNoneType'
+          description: Not found
+      summary: Get
+      tags:
+      - v1-auth-profile
+    patch:
+      deprecated: false
+      operationId: ApiV1AuthProfilesAuthProfileUuidPatch
+      parameters:
+      - deprecated: false
+        in: path
+        name: auth_profile_uuid
+        required: true
+        schema:
+          format: uuid
+          type: string
+      - deprecated: false
+        in: header
+        name: authorization
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthProfileUpdateSchema'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthProfileShortInfoSchema'
+          description: Request fulfilled, document follows
+          headers: {}
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Validation Exception
+                examples:
+                - detail: Bad Request
+                  extra: {}
+                  status_code: 400
+                properties:
+                  detail:
+                    type: string
+                  extra:
+                    additionalProperties: {}
+                    type:
+                    - 'null'
+                    - object
+                    - array
+                  status_code:
+                    type: integer
+                required:
+                - detail
+                - status_code
+                type: object
+          description: Bad request syntax or unsupported method
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaRoleAttributeDescriptionSchema'
+          description: Forbidden
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaNoneType'
+          description: Not found
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaNoneType'
+          description: Unprocessable Entity
+      summary: Patch
+      tags:
+      - v1-auth-profile
+  /api/v1/auth-profiles/{auth_profile_uuid}/clone:
+    post:
+      deprecated: false
+      operationId: ApiV1AuthProfilesAuthProfileUuidCloneClone
+      parameters:
+      - deprecated: false
+        in: path
+        name: auth_profile_uuid
+        required: true
+        schema:
+          format: uuid
+          type: string
+      - deprecated: false
+        in: header
+        name: authorization
+        required: true
+        schema:
+          type: string
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthProfileShortInfoSchema'
+          description: Created
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Validation Exception
+                examples:
+                - detail: Bad Request
+                  extra: {}
+                  status_code: 400
+                properties:
+                  detail:
+                    type: string
+                  extra:
+                    additionalProperties: {}
+                    type:
+                    - 'null'
+                    - object
+                    - array
+                  status_code:
+                    type: integer
+                required:
+                - detail
+                - status_code
+                type: object
+          description: Bad request syntax or unsupported method
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaRoleAttributeDescriptionSchema'
+          description: Forbidden
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaNoneType'
+          description: Not found
+      summary: Clone
+      tags:
+      - v1-auth-profile
+  /api/v1/groups:
+    get:
+      deprecated: false
+      operationId: ApiV1GroupsGetAll
+      parameters:
+      - allowEmptyValue: false
+        allowReserved: false
+        deprecated: false
+        in: query
+        name: by_name
+        required: false
+        schema:
+          oneOf:
+          - type: string
+          - type: 'null'
+      - allowEmptyValue: false
+        allowReserved: false
+        deprecated: false
+        in: query
+        name: by_role
+        required: false
+        schema:
+          oneOf:
+          - type: string
+          - type: 'null'
+      - deprecated: false
+        in: header
+        name: authorization
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/GroupRoleInfoSchema'
+                type: array
+          description: Request fulfilled, document follows
+          headers: {}
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Validation Exception
+                examples:
+                - detail: Bad Request
+                  extra: {}
+                  status_code: 400
+                properties:
+                  detail:
+                    type: string
+                  extra:
+                    additionalProperties: {}
+                    type:
+                    - 'null'
+                    - object
+                    - array
+                  status_code:
+                    type: integer
+                required:
+                - detail
+                - status_code
+                type: object
+          description: Bad request syntax or unsupported method
+      summary: GetAll
+      tags:
+      - v1-group
+    post:
+      deprecated: false
+      operationId: ApiV1GroupsCreate
+      parameters:
+      - deprecated: false
+        in: header
+        name: authorization
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GroupNewSchema'
+        required: true
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupShortInfoSchema'
+          description: Created
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Validation Exception
+                examples:
+                - detail: Bad Request
+                  extra: {}
+                  status_code: 400
+                properties:
+                  detail:
+                    type: string
+                  extra:
+                    additionalProperties: {}
+                    type:
+                    - 'null'
+                    - object
+                    - array
+                  status_code:
+                    type: integer
+                required:
+                - detail
+                - status_code
+                type: object
+          description: Bad request syntax or unsupported method
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaRoleAttributeDescriptionSchema'
+          description: Forbidden
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaNoneType'
+          description: Unprocessable Entity
+      summary: Create
+      tags:
+      - v1-group
+  /api/v1/groups/roles/list:
+    get:
+      deprecated: false
+      operationId: ApiV1GroupsRolesListGetRoles
+      parameters:
+      - deprecated: false
+        in: header
+        name: authorization
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RolesListSchema'
+          description: Request fulfilled, document follows
+          headers: {}
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Validation Exception
+                examples:
+                - detail: Bad Request
+                  extra: {}
+                  status_code: 400
+                properties:
+                  detail:
+                    type: string
+                  extra:
+                    additionalProperties: {}
+                    type:
+                    - 'null'
+                    - object
+                    - array
+                  status_code:
+                    type: integer
+                required:
+                - detail
+                - status_code
+                type: object
+          description: Bad request syntax or unsupported method
+      summary: GetRoles
+      tags:
+      - v1-group
+  /api/v1/groups/{group_uuid}:
+    get:
+      deprecated: false
+      operationId: ApiV1GroupsGroupUuidGet
+      parameters:
+      - deprecated: false
+        in: path
+        name: group_uuid
+        required: true
+        schema:
+          format: uuid
+          type: string
+      - deprecated: false
+        in: header
+        name: authorization
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupRoleFullInfoSchema'
+          description: Request fulfilled, document follows
+          headers: {}
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Validation Exception
+                examples:
+                - detail: Bad Request
+                  extra: {}
+                  status_code: 400
+                properties:
+                  detail:
+                    type: string
+                  extra:
+                    additionalProperties: {}
+                    type:
+                    - 'null'
+                    - object
+                    - array
+                  status_code:
+                    type: integer
+                required:
+                - detail
+                - status_code
+                type: object
+          description: Bad request syntax or unsupported method
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaNoneType'
+          description: Not found
+      summary: Get
+      tags:
+      - v1-group
+  /api/v1/groups/{group_uuid}/permissions:
+    get:
+      deprecated: false
+      operationId: ApiV1GroupsGroupUuidPermissionsGetPermissions
+      parameters:
+      - deprecated: false
+        in: path
+        name: group_uuid
+        required: true
+        schema:
+          format: uuid
+          type: string
+      - deprecated: false
+        in: header
+        name: authorization
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupRolePermissionsSchema'
+          description: Request fulfilled, document follows
+          headers: {}
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Validation Exception
+                examples:
+                - detail: Bad Request
+                  extra: {}
+                  status_code: 400
+                properties:
+                  detail:
+                    type: string
+                  extra:
+                    additionalProperties: {}
+                    type:
+                    - 'null'
+                    - object
+                    - array
+                  status_code:
+                    type: integer
+                required:
+                - detail
+                - status_code
+                type: object
+          description: Bad request syntax or unsupported method
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaNoneType'
+          description: Not found
+      summary: GetPermissions
+      tags:
+      - v1-group
+  /api/v1/groups/{group_uuid}/users/add:
+    post:
+      deprecated: false
+      operationId: ApiV1GroupsGroupUuidUsersAddAddUsers
+      parameters:
+      - deprecated: false
+        in: path
+        name: group_uuid
+        required: true
+        schema:
+          format: uuid
+          type: string
+      - deprecated: false
+        in: header
+        name: authorization
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              items:
+                $ref: '#/components/schemas/UserRoleSchema'
+              type: array
+        required: true
+      responses:
+        '204':
+          description: Request fulfilled, nothing follows
+          headers: {}
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Validation Exception
+                examples:
+                - detail: Bad Request
+                  extra: {}
+                  status_code: 400
+                properties:
+                  detail:
+                    type: string
+                  extra:
+                    additionalProperties: {}
+                    type:
+                    - 'null'
+                    - object
+                    - array
+                  status_code:
+                    type: integer
+                required:
+                - detail
+                - status_code
+                type: object
+          description: Bad request syntax or unsupported method
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaRoleAttributeDescriptionSchema'
+          description: Forbidden
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaNoneType'
+          description: Not found
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaNoneType'
+          description: Unprocessable Entity
+      summary: AddUsers
+      tags:
+      - v1-group
+  /api/v1/profiles:
+    get:
+      deprecated: false
+      operationId: ApiV1ProfilesGetAll
+      parameters:
+      - deprecated: false
+        in: header
+        name: authorization
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/ProfileShortInfoSchema'
+                type: array
+          description: Request fulfilled, document follows
+          headers: {}
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Validation Exception
+                examples:
+                - detail: Bad Request
+                  extra: {}
+                  status_code: 400
+                properties:
+                  detail:
+                    type: string
+                  extra:
+                    additionalProperties: {}
+                    type:
+                    - 'null'
+                    - object
+                    - array
+                  status_code:
+                    type: integer
+                required:
+                - detail
+                - status_code
+                type: object
+          description: Bad request syntax or unsupported method
+      summary: GetAll
+      tags:
+      - v1-profile
+    post:
+      deprecated: false
+      operationId: ApiV1ProfilesCreate
+      parameters:
+      - deprecated: false
+        in: header
+        name: authorization
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProfileCreateSchema'
+        required: true
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileShortInfoSchema'
+          description: Document created, URL follows
+          headers: {}
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Validation Exception
+                examples:
+                - detail: Bad Request
+                  extra: {}
+                  status_code: 400
+                properties:
+                  detail:
+                    type: string
+                  extra:
+                    additionalProperties: {}
+                    type:
+                    - 'null'
+                    - object
+                    - array
+                  status_code:
+                    type: integer
+                required:
+                - detail
+                - status_code
+                type: object
+          description: Bad request syntax or unsupported method
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaRoleAttributeDescriptionSchema'
+          description: Forbidden
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaInvalidModules'
+          description: Unprocessable Entity
+      summary: Create
+      tags:
+      - v1-profile
+  /api/v1/profiles/modules/list:
+    get:
+      deprecated: false
+      operationId: ApiV1ProfilesModulesListGetModules
+      parameters:
+      - allowEmptyValue: false
+        allowReserved: false
+        deprecated: false
+        in: query
+        name: severity
+        required: false
+        schema:
+          oneOf:
+          - $ref: '#/components/schemas/Severity'
+          - type: 'null'
+      - deprecated: false
+        in: header
+        name: authorization
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  type: string
+                type: array
+          description: Request fulfilled, document follows
+          headers: {}
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Validation Exception
+                examples:
+                - detail: Bad Request
+                  extra: {}
+                  status_code: 400
+                properties:
+                  detail:
+                    type: string
+                  extra:
+                    additionalProperties: {}
+                    type:
+                    - 'null'
+                    - object
+                    - array
+                  status_code:
+                    type: integer
+                required:
+                - detail
+                - status_code
+                type: object
+          description: Bad request syntax or unsupported method
+      summary: GetModules
+      tags:
+      - v1-profile
+  /api/v1/profiles/{profile_uuid}:
+    delete:
+      deprecated: false
+      operationId: ApiV1ProfilesProfileUuidDelete
+      parameters:
+      - deprecated: false
+        in: path
+        name: profile_uuid
+        required: true
+        schema:
+          format: uuid
+          type: string
+      - deprecated: false
+        in: header
+        name: authorization
+        required: true
+        schema:
+          type: string
+      responses:
+        '204':
+          description: Request fulfilled, nothing follows
+          headers: {}
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Validation Exception
+                examples:
+                - detail: Bad Request
+                  extra: {}
+                  status_code: 400
+                properties:
+                  detail:
+                    type: string
+                  extra:
+                    additionalProperties: {}
+                    type:
+                    - 'null'
+                    - object
+                    - array
+                  status_code:
+                    type: integer
+                required:
+                - detail
+                - status_code
+                type: object
+          description: Bad request syntax or unsupported method
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaRoleAttributeDescriptionSchema'
+          description: Forbidden
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaNoneType'
+          description: Not found
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaProfilesConflicts'
+          description: Conflict
+      summary: Delete
+      tags:
+      - v1-profile
+    get:
+      deprecated: false
+      operationId: ApiV1ProfilesProfileUuidGet
+      parameters:
+      - deprecated: false
+        in: path
+        name: profile_uuid
+        required: true
+        schema:
+          format: uuid
+          type: string
+      - deprecated: false
+        in: header
+        name: authorization
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileFullInfoSchema'
+          description: Request fulfilled, document follows
+          headers: {}
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Validation Exception
+                examples:
+                - detail: Bad Request
+                  extra: {}
+                  status_code: 400
+                properties:
+                  detail:
+                    type: string
+                  extra:
+                    additionalProperties: {}
+                    type:
+                    - 'null'
+                    - object
+                    - array
+                  status_code:
+                    type: integer
+                required:
+                - detail
+                - status_code
+                type: object
+          description: Bad request syntax or unsupported method
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaNoneType'
+          description: Not found
+      summary: Get
+      tags:
+      - v1-profile
+    patch:
+      deprecated: false
+      operationId: ApiV1ProfilesProfileUuidUpdate
+      parameters:
+      - deprecated: false
+        in: path
+        name: profile_uuid
+        required: true
+        schema:
+          format: uuid
+          type: string
+      - deprecated: false
+        in: header
+        name: authorization
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProfileUpdateSchema'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileShortInfoSchema'
+          description: Request fulfilled, document follows
+          headers: {}
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Validation Exception
+                examples:
+                - detail: Bad Request
+                  extra: {}
+                  status_code: 400
+                properties:
+                  detail:
+                    type: string
+                  extra:
+                    additionalProperties: {}
+                    type:
+                    - 'null'
+                    - object
+                    - array
+                  status_code:
+                    type: integer
+                required:
+                - detail
+                - status_code
+                type: object
+          description: Bad request syntax or unsupported method
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaRoleAttributeDescriptionSchema'
+          description: Forbidden
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaNoneType'
+          description: Not found
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaInvalidModules'
+          description: Unprocessable Entity
+      summary: Update
+      tags:
+      - v1-profile
+  /api/v1/profiles/{profile_uuid}/clone:
+    post:
+      deprecated: false
+      operationId: ApiV1ProfilesProfileUuidCloneClone
+      parameters:
+      - deprecated: false
+        in: path
+        name: profile_uuid
+        required: true
+        schema:
+          format: uuid
+          type: string
+      - deprecated: false
+        in: header
+        name: authorization
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProfileCloneSchema'
+        required: true
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileShortInfoSchema'
+          description: Created
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Validation Exception
+                examples:
+                - detail: Bad Request
+                  extra: {}
+                  status_code: 400
+                properties:
+                  detail:
+                    type: string
+                  extra:
+                    additionalProperties: {}
+                    type:
+                    - 'null'
+                    - object
+                    - array
+                  status_code:
+                    type: integer
+                required:
+                - detail
+                - status_code
+                type: object
+          description: Bad request syntax or unsupported method
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaRoleAttributeDescriptionSchema'
+          description: Forbidden
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaNoneType'
+          description: Not found
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaNoneType'
+          description: Unprocessable Entity
+      summary: Clone
+      tags:
+      - v1-profile
+  /api/v1/reports/html/{scan_uuid}:
+    get:
+      deprecated: false
+      operationId: ApiV1ReportsHtmlScanUuidHtml
+      parameters:
+      - deprecated: false
+        in: path
+        name: scan_uuid
+        required: true
+        schema:
+          format: uuid
+          type: string
+      - allowEmptyValue: false
+        allowReserved: false
+        deprecated: false
+        in: query
+        name: locale
+        required: true
+        schema:
+          $ref: '#/components/schemas/ReportLangEnum'
+      - allowEmptyValue: false
+        allowReserved: false
+        deprecated: false
+        in: query
+        name: template
+        required: true
+        schema:
+          $ref: '#/components/schemas/TemplateName'
+      responses:
+        '200':
+          content:
+            application/octet-stream:
+              schema: {}
+          description: Request fulfilled, document follows
+          headers: {}
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Validation Exception
+                examples:
+                - detail: Bad Request
+                  extra: {}
+                  status_code: 400
+                properties:
+                  detail:
+                    type: string
+                  extra:
+                    additionalProperties: {}
+                    type:
+                    - 'null'
+                    - object
+                    - array
+                  status_code:
+                    type: integer
+                required:
+                - detail
+                - status_code
+                type: object
+          description: Bad request syntax or unsupported method
+        '403':
+          description: Forbidden
+        '404':
+          description: Not found
+        '503':
+          description: Service unavailable
+      summary: Html
+      tags:
+      - v1-report
+  /api/v1/reports/sarif/{scan_uuid}:
+    get:
+      deprecated: false
+      operationId: ApiV1ReportsSarifScanUuidSarif
+      parameters:
+      - deprecated: false
+        in: path
+        name: scan_uuid
+        required: true
+        schema:
+          format: uuid
+          type: string
+      - allowEmptyValue: false
+        allowReserved: false
+        deprecated: false
+        in: query
+        name: locale
+        required: true
+        schema:
+          $ref: '#/components/schemas/ReportLangEnum'
+      responses:
+        '200':
+          content:
+            application/octet-stream:
+              schema: {}
+          description: Request fulfilled, document follows
+          headers: {}
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Validation Exception
+                examples:
+                - detail: Bad Request
+                  extra: {}
+                  status_code: 400
+                properties:
+                  detail:
+                    type: string
+                  extra:
+                    additionalProperties: {}
+                    type:
+                    - 'null'
+                    - object
+                    - array
+                  status_code:
+                    type: integer
+                required:
+                - detail
+                - status_code
+                type: object
+          description: Bad request syntax or unsupported method
+        '403':
+          description: Forbidden
+        '404':
+          description: Not found
+        '503':
+          description: Service unavailable
+      summary: Sarif
+      tags:
+      - v1-report
+  /api/v1/scans/{scan_uuid}:
+    get:
+      deprecated: false
+      operationId: ApiV1ScansScanUuidInfo
+      parameters:
+      - deprecated: false
+        in: path
+        name: scan_uuid
+        required: true
+        schema:
+          format: uuid
+          type: string
+      - deprecated: false
+        in: header
+        name: authorization
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScanQueueProfilesSchema'
+          description: Request fulfilled, document follows
+          headers: {}
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Validation Exception
+                examples:
+                - detail: Bad Request
+                  extra: {}
+                  status_code: 400
+                properties:
+                  detail:
+                    type: string
+                  extra:
+                    additionalProperties: {}
+                    type:
+                    - 'null'
+                    - object
+                    - array
+                  status_code:
+                    type: integer
+                required:
+                - detail
+                - status_code
+                type: object
+          description: Bad request syntax or unsupported method
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaRoleAttributeDescriptionSchema'
+          description: Forbidden
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaNoneType'
+          description: Not found
+      summary: Info
+      tags:
+      - v1-scan
+  /api/v1/scans/{scan_uuid}/perimeter:
+    get:
+      deprecated: false
+      operationId: ApiV1ScansScanUuidPerimeterGetPerimeter
+      parameters:
+      - deprecated: false
+        in: path
+        name: scan_uuid
+        required: true
+        schema:
+          format: uuid
+          type: string
+      - allowEmptyValue: false
+        allowReserved: false
+        deprecated: false
+        in: query
+        name: severity
+        required: false
+        schema:
+          oneOf:
+          - items:
+              $ref: '#/components/schemas/Severity'
+            type: array
+          - type: 'null'
+      - allowEmptyValue: false
+        allowReserved: false
+        deprecated: false
+        in: query
+        name: page
+        required: false
+        schema:
+          oneOf:
+          - type: integer
+          - type: 'null'
+      - allowEmptyValue: false
+        allowReserved: false
+        deprecated: false
+        in: query
+        name: limit
+        required: false
+        schema:
+          oneOf:
+          - type: integer
+          - type: 'null'
+      - allowEmptyValue: false
+        allowReserved: false
+        deprecated: false
+        in: query
+        name: filter
+        required: false
+        schema:
+          oneOf:
+          - type: string
+          - type: 'null'
+      - deprecated: false
+        in: header
+        name: authorization
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginationSchemaVulnPerimeterSchema'
+          description: Request fulfilled, document follows
+          headers: {}
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Validation Exception
+                examples:
+                - detail: Bad Request
+                  extra: {}
+                  status_code: 400
+                properties:
+                  detail:
+                    type: string
+                  extra:
+                    additionalProperties: {}
+                    type:
+                    - 'null'
+                    - object
+                    - array
+                  status_code:
+                    type: integer
+                required:
+                - detail
+                - status_code
+                type: object
+          description: Bad request syntax or unsupported method
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaRoleAttributeDescriptionSchema'
+          description: Forbidden
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaNoneType'
+          description: Not found
+      summary: GetPerimeter
+      tags:
+      - v1-vulnerabilities
+  /api/v1/scans/{scan_uuid}/shared:
+    get:
+      deprecated: false
+      operationId: ApiV1ScansScanUuidSharedGetAll
+      parameters:
+      - deprecated: false
+        in: path
+        name: scan_uuid
+        required: true
+        schema:
+          format: uuid
+          type: string
+      - deprecated: false
+        in: header
+        name: authorization
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/SharedLinkSchema'
+                type: array
+          description: Request fulfilled, document follows
+          headers: {}
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Validation Exception
+                examples:
+                - detail: Bad Request
+                  extra: {}
+                  status_code: 400
+                properties:
+                  detail:
+                    type: string
+                  extra:
+                    additionalProperties: {}
+                    type:
+                    - 'null'
+                    - object
+                    - array
+                  status_code:
+                    type: integer
+                required:
+                - detail
+                - status_code
+                type: object
+          description: Bad request syntax or unsupported method
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaNoneType'
+          description: Not found
+      summary: GetAll
+      tags:
+      - v1-shared-link
+    post:
+      deprecated: false
+      operationId: ApiV1ScansScanUuidSharedCreate
+      parameters:
+      - deprecated: false
+        in: path
+        name: scan_uuid
+        required: true
+        schema:
+          format: uuid
+          type: string
+      - deprecated: false
+        in: header
+        name: authorization
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SharedLinkCreateSchema'
+        required: true
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SharedLinkSchema'
+          description: Document created, URL follows
+          headers: {}
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Validation Exception
+                examples:
+                - detail: Bad Request
+                  extra: {}
+                  status_code: 400
+                properties:
+                  detail:
+                    type: string
+                  extra:
+                    additionalProperties: {}
+                    type:
+                    - 'null'
+                    - object
+                    - array
+                  status_code:
+                    type: integer
+                required:
+                - detail
+                - status_code
+                type: object
+          description: Bad request syntax or unsupported method
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaRoleAttributeDescriptionSchema'
+          description: Forbidden
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaNoneType'
+          description: Not found
+      summary: Create
+      tags:
+      - v1-shared-link
+  /api/v1/scans/{scan_uuid}/vulnerabilities:
+    get:
+      deprecated: false
+      operationId: ApiV1ScansScanUuidVulnerabilitiesGetGroups
+      parameters:
+      - deprecated: false
+        in: path
+        name: scan_uuid
+        required: true
+        schema:
+          format: uuid
+          type: string
+      - allowEmptyValue: false
+        allowReserved: false
+        deprecated: false
+        in: query
+        name: severity
+        required: false
+        schema:
+          oneOf:
+          - $ref: '#/components/schemas/Severity'
+          - type: 'null'
+      - deprecated: false
+        in: header
+        name: authorization
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/VulnGroupSchema'
+                type: array
+          description: Request fulfilled, document follows
+          headers: {}
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Validation Exception
+                examples:
+                - detail: Bad Request
+                  extra: {}
+                  status_code: 400
+                properties:
+                  detail:
+                    type: string
+                  extra:
+                    additionalProperties: {}
+                    type:
+                    - 'null'
+                    - object
+                    - array
+                  status_code:
+                    type: integer
+                required:
+                - detail
+                - status_code
+                type: object
+          description: Bad request syntax or unsupported method
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaRoleAttributeDescriptionSchema'
+          description: Forbidden
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaNoneType'
+          description: Not found
+      summary: GetGroups
+      tags:
+      - v1-vulnerabilities
+  /api/v1/scans/{scan_uuid}/vulnerabilities/{issue_type}/{group_name}/{severity}:
+    get:
+      deprecated: false
+      operationId: ApiV1ScansScanUuidVulnerabilitiesIssueTypeGroupNameSeverityGetInGroup
+      parameters:
+      - deprecated: false
+        in: path
+        name: scan_uuid
+        required: true
+        schema:
+          format: uuid
+          type: string
+      - deprecated: false
+        in: path
+        name: issue_type
+        required: true
+        schema:
+          $ref: '#/components/schemas/VulnerabilityIssue'
+      - deprecated: false
+        in: path
+        name: group_name
+        required: true
+        schema:
+          type: string
+      - deprecated: false
+        in: path
+        name: severity
+        required: true
+        schema:
+          $ref: '#/components/schemas/Severity'
+      - allowEmptyValue: false
+        allowReserved: false
+        deprecated: false
+        in: query
+        name: page
+        required: false
+        schema:
+          oneOf:
+          - type: integer
+          - type: 'null'
+      - allowEmptyValue: false
+        allowReserved: false
+        deprecated: false
+        in: query
+        name: limit
+        required: false
+        schema:
+          oneOf:
+          - type: integer
+          - type: 'null'
+      - deprecated: false
+        in: header
+        name: authorization
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginationSchemaVulnInGroupSchema'
+          description: Request fulfilled, document follows
+          headers: {}
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Validation Exception
+                examples:
+                - detail: Bad Request
+                  extra: {}
+                  status_code: 400
+                properties:
+                  detail:
+                    type: string
+                  extra:
+                    additionalProperties: {}
+                    type:
+                    - 'null'
+                    - object
+                    - array
+                  status_code:
+                    type: integer
+                required:
+                - detail
+                - status_code
+                type: object
+          description: Bad request syntax or unsupported method
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaRoleAttributeDescriptionSchema'
+          description: Forbidden
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaNoneType'
+          description: Not found
+        '500':
+          description: Internal server error
+      summary: GetInGroup
+      tags:
+      - v1-vulnerabilities
+  /api/v1/sites:
+    get:
+      deprecated: false
+      operationId: ApiV1SitesGetAll
+      parameters:
+      - deprecated: false
+        in: header
+        name: authorization
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/SiteSchema'
+                type: array
+          description: Request fulfilled, document follows
+          headers: {}
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Validation Exception
+                examples:
+                - detail: Bad Request
+                  extra: {}
+                  status_code: 400
+                properties:
+                  detail:
+                    type: string
+                  extra:
+                    additionalProperties: {}
+                    type:
+                    - 'null'
+                    - object
+                    - array
+                  status_code:
+                    type: integer
+                required:
+                - detail
+                - status_code
+                type: object
+          description: Bad request syntax or unsupported method
+      summary: GetAll
+      tags:
+      - v1-site
+  /api/v1/sites/add:
+    post:
+      deprecated: false
+      operationId: ApiV1SitesAddAdd
+      parameters:
+      - deprecated: false
+        in: header
+        name: authorization
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SiteCreateSchema'
+        required: true
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SiteSchema'
+          description: Document created, URL follows
+          headers: {}
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Validation Exception
+                examples:
+                - detail: Bad Request
+                  extra: {}
+                  status_code: 400
+                properties:
+                  detail:
+                    type: string
+                  extra:
+                    additionalProperties: {}
+                    type:
+                    - 'null'
+                    - object
+                    - array
+                  status_code:
+                    type: integer
+                required:
+                - detail
+                - status_code
+                type: object
+          description: Bad request syntax or unsupported method
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaRoleAttributeDescriptionSchema'
+          description: Forbidden
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaNoneType'
+          description: Unprocessable Entity
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaNoneType'
+          description: Service unavailable
+      summary: Add
+      tags:
+      - v1-site
+  /api/v1/sites/{site_uuid}:
+    get:
+      deprecated: false
+      operationId: ApiV1SitesSiteUuidGet
+      parameters:
+      - deprecated: false
+        in: path
+        name: site_uuid
+        required: true
+        schema:
+          format: uuid
+          type: string
+      - deprecated: false
+        in: header
+        name: authorization
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SiteSchema'
+          description: Request fulfilled, document follows
+          headers: {}
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Validation Exception
+                examples:
+                - detail: Bad Request
+                  extra: {}
+                  status_code: 400
+                properties:
+                  detail:
+                    type: string
+                  extra:
+                    additionalProperties: {}
+                    type:
+                    - 'null'
+                    - object
+                    - array
+                  status_code:
+                    type: integer
+                required:
+                - detail
+                - status_code
+                type: object
+          description: Bad request syntax or unsupported method
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaNoneType'
+          description: Not found
+      summary: Get
+      tags:
+      - v1-site
+  /api/v1/sites/{site_uuid}/settings:
+    get:
+      deprecated: false
+      operationId: ApiV1SitesSiteUuidSettingsGetSettings
+      parameters:
+      - deprecated: false
+        in: path
+        name: site_uuid
+        required: true
+        schema:
+          format: uuid
+          type: string
+      - deprecated: false
+        in: header
+        name: authorization
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SiteSettingsInfoSchema'
+          description: Request fulfilled, document follows
+          headers: {}
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Validation Exception
+                examples:
+                - detail: Bad Request
+                  extra: {}
+                  status_code: 400
+                properties:
+                  detail:
+                    type: string
+                  extra:
+                    additionalProperties: {}
+                    type:
+                    - 'null'
+                    - object
+                    - array
+                  status_code:
+                    type: integer
+                required:
+                - detail
+                - status_code
+                type: object
+          description: Bad request syntax or unsupported method
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaNoneType'
+          description: Not found
+      summary: GetSettings
+      tags:
+      - v1-site
+    post:
+      deprecated: false
+      operationId: ApiV1SitesSiteUuidSettingsSetSettings
+      parameters:
+      - deprecated: false
+        in: path
+        name: site_uuid
+        required: true
+        schema:
+          format: uuid
+          type: string
+      - deprecated: false
+        in: header
+        name: authorization
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SiteSetSettingsSchema'
+        required: true
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SiteSettingsInfoSchema'
+          description: Document created, URL follows
+          headers: {}
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Validation Exception
+                examples:
+                - detail: Bad Request
+                  extra: {}
+                  status_code: 400
+                properties:
+                  detail:
+                    type: string
+                  extra:
+                    additionalProperties: {}
+                    type:
+                    - 'null'
+                    - object
+                    - array
+                  status_code:
+                    type: integer
+                required:
+                - detail
+                - status_code
+                type: object
+          description: Bad request syntax or unsupported method
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaRoleAttributeDescriptionSchema'
+          description: Forbidden
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaNoneType'
+          description: Not found
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaNoneType'
+          description: Unprocessable Entity
+      summary: SetSettings
+      tags:
+      - v1-site
+  /api/v1/sites/{site_uuid}/start:
+    post:
+      deprecated: false
+      operationId: ApiV1SitesSiteUuidStartStart
+      parameters:
+      - deprecated: false
+        in: path
+        name: site_uuid
+        required: true
+        schema:
+          format: uuid
+          type: string
+      - deprecated: false
+        in: header
+        name: authorization
+        required: true
+        schema:
+          type: string
+      responses:
+        '202':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScanQueueProfilesSchema'
+          description: Request accepted, processing continues off-line
+          headers: {}
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Validation Exception
+                examples:
+                - detail: Bad Request
+                  extra: {}
+                  status_code: 400
+                properties:
+                  detail:
+                    type: string
+                  extra:
+                    additionalProperties: {}
+                    type:
+                    - 'null'
+                    - object
+                    - array
+                  status_code:
+                    type: integer
+                required:
+                - detail
+                - status_code
+                type: object
+          description: Bad request syntax or unsupported method
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaRoleAttributeDescriptionSchemaNone'
+          description: Forbidden
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaNoneType'
+          description: Not found
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaNoneType'
+          description: Service unavailable
+      summary: Start
+      tags:
+      - v1-scan
+  /api/v1/sites/{site_uuid}/stop:
+    post:
+      deprecated: false
+      operationId: ApiV1SitesSiteUuidStopStop
+      parameters:
+      - deprecated: false
+        in: path
+        name: site_uuid
+        required: true
+        schema:
+          format: uuid
+          type: string
+      - deprecated: false
+        in: header
+        name: authorization
+        required: true
+        schema:
+          type: string
+      responses:
+        '204':
+          description: Request fulfilled, nothing follows
+          headers: {}
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Validation Exception
+                examples:
+                - detail: Bad Request
+                  extra: {}
+                  status_code: 400
+                properties:
+                  detail:
+                    type: string
+                  extra:
+                    additionalProperties: {}
+                    type:
+                    - 'null'
+                    - object
+                    - array
+                  status_code:
+                    type: integer
+                required:
+                - detail
+                - status_code
+                type: object
+          description: Bad request syntax or unsupported method
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaRoleAttributeDescriptionSchemaNone'
+          description: Forbidden
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaNoneType'
+          description: Not found
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaNoneType'
+          description: Service unavailable
+      summary: Stop
+      tags:
+      - v1-scan
+  /api/v1/users:
+    post:
+      deprecated: false
+      operationId: ApiV1UsersCreate
+      parameters:
+      - deprecated: false
+        in: header
+        name: authorization
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUUIDSchema'
+        required: true
+      responses:
+        '201':
+          description: Document created, URL follows
+          headers: {}
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Validation Exception
+                examples:
+                - detail: Bad Request
+                  extra: {}
+                  status_code: 400
+                properties:
+                  detail:
+                    type: string
+                  extra:
+                    additionalProperties: {}
+                    type:
+                    - 'null'
+                    - object
+                    - array
+                  status_code:
+                    type: integer
+                required:
+                - detail
+                - status_code
+                type: object
+          description: Bad request syntax or unsupported method
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaRoleAttributeDescriptionSchema'
+          description: Forbidden
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorSchemaNoneType'
+          description: Unprocessable Entity
+      summary: Create
+      tags:
+      - v1-users
+servers:
+- url: /
+tags: []

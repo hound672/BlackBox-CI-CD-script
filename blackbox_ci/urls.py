@@ -1,5 +1,4 @@
 import re
-from typing import Optional
 
 from blackbox_ci.consts import DEFAULT_SCHEME, STANDARD_PORT_SCHEMES
 from blackbox_ci.errors import UrlParseError
@@ -48,7 +47,7 @@ def parse_url(url: str, drop_fragment: bool = False) -> UrlParts:
     return UrlParts(scheme, hostname, port, path, query, fragment)
 
 
-def unparse_url(parts: UrlParts) -> str:  # noqa: C901
+def unparse_url(parts: UrlParts) -> str:
     url = parts.hostname
     if parts.scheme is not None:
         url = parts.scheme + '://' + url
@@ -67,14 +66,13 @@ def normalize_url(url: str, drop_fragment: bool = False) -> str:
     return unparse_url(parse_url(url, drop_fragment))
 
 
-def _normalize_scheme(scheme: Optional[str], port: Optional[int]) -> Optional[str]:
+def _normalize_scheme(scheme: str | None, port: int | None) -> str | None:
     if scheme is None:
         if port is None:
             return DEFAULT_SCHEME
-        elif port in STANDARD_PORT_SCHEMES:
+        if port in STANDARD_PORT_SCHEMES:
             return STANDARD_PORT_SCHEMES[port]
-        else:
-            return None
+        return None
     return scheme.lower()
 
 
@@ -82,25 +80,21 @@ def _normalize_hostname(hostname: str) -> str:
     return hostname.lower()
 
 
-def _normalize_port(scheme: str, port: Optional[int]) -> Optional[int]:
-    if scheme == 'http':
-        if port == 80:
-            return None
-    elif scheme == 'https':
-        if port == 443:
-            return None
+def _normalize_port(scheme: str, port: int | None) -> int | None:
+    if port is not None and STANDARD_PORT_SCHEMES.get(port) == scheme:
+        return None
     return port
 
 
-def _normalize_path(path: Optional[str]) -> str:
+def _normalize_path(path: str | None) -> str:
     return path or '/'
 
 
-def _normalize_query(query: Optional[str]) -> Optional[str]:
+def _normalize_query(query: str | None) -> str | None:
     return query or None
 
 
-def _normalize_fragment(fragment: Optional[str], drop_fragment: bool) -> Optional[str]:
+def _normalize_fragment(fragment: str | None, drop_fragment: bool) -> str | None:
     if drop_fragment:
         return None
     return fragment or None
